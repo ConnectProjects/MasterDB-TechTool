@@ -184,6 +184,46 @@ export async function backupToSyncFolder(dirHandle) {
   }
 }
 
+/**
+ * Automatically export key tables to a multi-sheet XLSX file in the sync folder.
+ */
+export async function exportExcelToSyncFolder(dirHandle) {
+  if (!dirHandle || typeof XLSX === 'undefined') return
+
+  try {
+    const excelDir = await dirHandle.getDirectoryHandle('excel', { create: true })
+    
+    // 1. Gather data
+    const data = {
+      'Companies': query('SELECT * FROM companies'),
+      'Employees': query('SELECT * FROM employees'),
+      'Tests':     query('SELECT * FROM tests'),
+      'Baselines': query('SELECT * FROM baselines')
+    }
+    
+    // 2. Create workbook
+    const wb = XLSX.utils.book_new()
+    for (const [sheetName, rows] of Object.entries(data)) {
+      const ws = XLSX.utils.json_to_sheet(rows)
+      XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    }
+    
+    // 3. Write to array buffer
+    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+    
+    // 4. Save to sync folder
+    const filename = `masterdb-data-export.xlsx`
+    const fh = await excelDir.getFileHandle(filename, { create: true })
+    const w  = await fh.createWritable()
+    await w.write(buf)
+    await w.close()
+    
+    console.log('Auto-excel export completed:', filename)
+  } catch (err) {
+    console.error('Auto-excel export failed:', err)
+  }
+}
+
 async function cleanupOldBackups(backupDir) {
   try {
     const files = []

@@ -361,9 +361,13 @@ export function renderSettings(container, state, navigate) {
       btn.textContent = 'Change Sync Folder'
       
       // Start auto-backup since we now have a folder
-      const { backupToSyncFolder } = await import('../db/sqlite.js')
-      setInterval(() => backupToSyncFolder(state.syncFolder), 5 * 60 * 1000)
+      const { backupToSyncFolder, exportExcelToSyncFolder } = await import('../db/sqlite.js')
+      setInterval(() => {
+        backupToSyncFolder(state.syncFolder)
+        exportExcelToSyncFolder(state.syncFolder)
+      }, 5 * 60 * 1000)
       backupToSyncFolder(state.syncFolder)
+      exportExcelToSyncFolder(state.syncFolder)
     } catch (e) {
       if (e.name !== 'AbortError') showFolderMsg('error', `Could not open folder: ${e.message}`)
     }
