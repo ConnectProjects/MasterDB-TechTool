@@ -1,4 +1,4 @@
-import { initDB, query, queryOne } from './db/sqlite.js'
+import { initDB, query, queryOne, backupToSyncFolder } from './db/sqlite.js'
 import { initSchema }         from './db/schema.js'
 import { querySyncFolder }    from '@shared/fs/sync-folder.js'
 import { BrandLogo }          from '@shared/components/brand-logo.js'
@@ -167,6 +167,14 @@ async function boot() {
   )
 
   applyTheme(loadThemeColor())
+  
+  // Start auto-backup interval (every 5 minutes)
+  if (state.syncFolder) {
+    setInterval(() => backupToSyncFolder(state.syncFolder), 5 * 60 * 1000)
+    // Run once immediately on boot
+    backupToSyncFolder(state.syncFolder)
+  }
+
   setBootMsg('Ready.')
   navigate('dashboard')
 }

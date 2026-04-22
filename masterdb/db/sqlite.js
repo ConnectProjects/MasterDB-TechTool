@@ -154,3 +154,56 @@ export function exportDB() {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Automatically backup the database to the provided FileSystemDirectoryHandle.
+ * Creates a 'backups' folder if it doesn't exist.
+ */
+export async function backupToSyncFolder(dirHandle) {
+  if (!dirHandle) return
+
+  try {
+    const data = getDB().export()
+    const backupDir = await dirHandle.getDirectoryHandle('backups', { create: true })
+    
+    // Use an ISO-like filename that is filesystem-safe
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename  = `masterdb-autobackup-${timestamp}.sqlite`
+    
+    const fh = await backupDir.getFileHandle(filename, { create: true })
+    const w  = await fh.createWritable()
+    await w.write(data)
+    await w.close()
+    
+    console.log('Auto-backup completed:', filename)
+
+    // Optional: cleanup old backups (keep only last 20)
+    await cleanupOldBackups(backupDir)
+  } catch (err) {
+    console.error('Auto-backup failed:', err)
+  }
+}
+
+async function cleanupOldBackups(backupDir) {
+  try {
+    const files = []
+    for await (const entry of backupDir.values()) {
+      if (entry.kind === 'file' && entry.name.startsWith('masterdb-autobackup-')) {
+        files.push(entry)
+      }
+    }
+
+    // Sort by name (which includes timestamp)
+    files.sort((a, b) => a.name.localeCompare(b.name))
+
+    // If more than 20, delete oldest
+    if (files.length > 20) {
+      const toDelete = files.slice(0, files.length - 20)
+      for (const entry of toDelete) {
+        await backupDir.removeEntry(entry.name)
+      }
+    }
+  } catch (e) {
+    console.warn('Backup cleanup failed:', e)
+  }
+}
