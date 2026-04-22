@@ -16,7 +16,7 @@ export function renderSchedule(container, state, navigate) {
       <header class="app-header">
         <h1 class="app-title">My Schedule</h1>
         <div class="header-right">
-          <button class="btn btn-sm btn-outline" id="btn-sync">↓ Check for Packets</button>
+          <button class="btn btn-sm btn-outline" id="btn-sync">Check Sync Folder</button>
           <button class="btn btn-sm btn-ghost"   id="btn-sync-status">⟳</button>
           <button class="btn btn-sm btn-ghost"   id="btn-settings">⚙</button>
           <span class="user-chip">${userName(user)}</span>
@@ -108,7 +108,7 @@ async function doSync(container, state, navigate) {
   const banner = container.querySelector('#sync-banner')
 
   btn.disabled    = true
-  btn.textContent = '↓ Checking…'
+  btn.textContent = 'Checking Folder…'
   showBanner(banner, 'info', 'Accessing sync folder…')
 
   try {
@@ -178,7 +178,7 @@ async function doSync(container, state, navigate) {
     if (e.name !== 'AbortError') showBanner(banner, 'error', `Sync failed: ${e.message}`)
   } finally {
     btn.disabled    = false
-    btn.textContent = '↓ Check for Packets'
+    btn.textContent = 'Check Sync Folder'
   }
 }
 

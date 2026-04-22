@@ -29,7 +29,7 @@ export async function renderDashboard(container, state, navigate) {
       <header class="app-header">
         <h1 class="app-title">Dashboard</h1>
         <div class="header-right">
-          <button class="btn btn-sm btn-outline" id="btn-sync">↓ Sync</button>
+          <button class="btn btn-sm btn-outline" id="btn-sync">Check Sync Folder</button>
           <button class="btn btn-sm btn-ghost"   id="btn-schedule">☰</button>
           <button class="btn btn-sm btn-ghost"   id="btn-settings">⚙</button>
           <span class="user-chip">${esc(firstName)}</span>
@@ -161,7 +161,7 @@ function upcomingRow(p) {
 async function doSync(container, state, navigate) {
   const btn    = container.querySelector('#btn-sync')
   const banner = container.querySelector('#sync-banner')
-  if (btn) { btn.disabled = true; btn.textContent = '↓ Syncing…' }
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking Folder…' }
   showBanner(banner, 'info', 'Accessing sync folder…')
 
   try {
@@ -213,7 +213,7 @@ async function doSync(container, state, navigate) {
   } catch (e) {
     if (e.name !== 'AbortError') showBanner(banner, 'error', `Sync failed: ${e.message}`)
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '↓ Sync' }
+    if (btn) { btn.disabled = false; btn.textContent = 'Check Sync Folder' }
   }
 }
 
