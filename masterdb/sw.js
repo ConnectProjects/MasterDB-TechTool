@@ -5,7 +5,7 @@ const APP_SHELL = [
   './app.js',
   './style.css',
   './manifest.json',
-  '/shared/components/brand-logo.png',
+  '../shared/components/brand-logo.png',
   './db/sqlite.js',
   './db/schema.js',
   './db/companies.js',
