@@ -161,6 +161,16 @@ html, body {
   margin-left: auto;
 }
 
+/* Ensure outline buttons in headers are visible against the brand green */
+.app-header .btn-outline {
+  color: #fff;
+  border-color: rgba(255,255,255, 0.5);
+}
+.app-header .btn-outline:hover:not(:disabled) {
+  background: rgba(255,255,255, 0.15);
+  border-color: #fff;
+}
+
 /* ---- Buttons --------------------------------------------- */
 .btn {
   display: inline-flex;
