@@ -1,0 +1,289 @@
+/**
+ * Database schema initialization and province seed data.
+ * Call initSchema() once after initDB() on first boot.
+ * Safe to call on subsequent boots — all statements use IF NOT EXISTS.
+ */
+
+import { getDB, run, query, transaction } from './sqlite.js'
+
+const CREATE_TABLES = `
+
+CREATE TABLE IF NOT EXISTS provinces (
+  province_code  TEXT PRIMARY KEY,
+  province_name  TEXT NOT NULL,
+  regulation_ref TEXT,
+  active         INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS classification_rules (
+  rule_id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  province_code    TEXT NOT NULL,
+  category_code    TEXT NOT NULL,
+  category_label   TEXT NOT NULL,
+  rule_type        TEXT NOT NULL,
+  threshold_db     REAL NOT NULL,
+  freq_range_low   INTEGER,
+  freq_range_high  INTEGER,
+  comparison_basis TEXT NOT NULL DEFAULT 'baseline',
+  followup_months  INTEGER,
+  requires_referral INTEGER NOT NULL DEFAULT 0,
+  priority         INTEGER NOT NULL DEFAULT 50,
+  effective_date   TEXT,
+  notes            TEXT,
+  FOREIGN KEY (province_code) REFERENCES provinces(province_code)
+);
+
+CREATE TABLE IF NOT EXISTS counsel_templates (
+  template_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+  province_code  TEXT NOT NULL,
+  category_code  TEXT NOT NULL,
+  category_label TEXT NOT NULL,
+  summary_text   TEXT NOT NULL,
+  tech_notes     TEXT,
+  FOREIGN KEY (province_code) REFERENCES provinces(province_code)
+);
+
+CREATE TABLE IF NOT EXISTS techs (
+  tech_id      TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  initials     TEXT NOT NULL,
+  email        TEXT,
+  role         TEXT NOT NULL DEFAULT 'tech',
+  folder_name  TEXT,
+  iat_number   TEXT,
+  active       INTEGER NOT NULL DEFAULT 1,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS companies (
+  company_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT NOT NULL,
+  province      TEXT NOT NULL,
+  address       TEXT,
+  contact_name  TEXT,
+  contact_phone TEXT,
+  contact_email TEXT,
+  sticky_notes  TEXT,
+  hpd_inventory TEXT DEFAULT '[]',
+  active        INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (province) REFERENCES provinces(province_code)
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+  employee_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id    INTEGER NOT NULL,
+  first_name    TEXT NOT NULL,
+  last_name     TEXT NOT NULL,
+  dob           TEXT,
+  hire_date     TEXT,
+  job_title     TEXT,
+  status        TEXT NOT NULL DEFAULT 'active',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+CREATE TABLE IF NOT EXISTS baselines (
+  baseline_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id   INTEGER NOT NULL,
+  test_date     TEXT NOT NULL,
+  archived      INTEGER NOT NULL DEFAULT 0,
+  left_500      REAL, left_1k  REAL, left_2k  REAL, left_3k  REAL,
+  left_4k       REAL, left_6k  REAL, left_8k  REAL,
+  right_500     REAL, right_1k REAL, right_2k REAL, right_3k REAL,
+  right_4k      REAL, right_6k REAL, right_8k REAL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+);
+
+CREATE TABLE IF NOT EXISTS tests (
+  test_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id          INTEGER NOT NULL,
+  test_date            TEXT NOT NULL,
+  tech_id              TEXT,
+  test_type            TEXT NOT NULL DEFAULT 'Periodic',
+  province             TEXT NOT NULL,
+  left_500   REAL, left_1k  REAL, left_2k  REAL, left_3k  REAL,
+  left_4k    REAL, left_6k  REAL, left_8k  REAL,
+  right_500  REAL, right_1k REAL, right_2k REAL, right_3k REAL,
+  right_4k   REAL, right_6k REAL, right_8k REAL,
+  classification            TEXT,
+  triggered_rule_id         INTEGER,
+  triggering_freq_hz        TEXT,
+  triggering_ear            TEXT,
+  shift_db                  REAL,
+  sts_flag                  INTEGER NOT NULL DEFAULT 0,
+  referral_given_to_worker  INTEGER NOT NULL DEFAULT 0,
+  referral_sent_to_employer INTEGER NOT NULL DEFAULT 0,
+  referral_sent_date        TEXT,
+  counsel_text              TEXT,
+  tech_notes                TEXT,
+  packet_id                 TEXT,
+  created_at                TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
+);
+
+CREATE TABLE IF NOT EXISTS hpd_assessments (
+  assessment_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+  test_id             INTEGER NOT NULL,
+  hpd_make_model      TEXT,
+  rated_nrr           REAL,
+  derated_nrr         REAL,
+  lex8hr              REAL,
+  protected_exposure  REAL,
+  adequacy            TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (test_id) REFERENCES tests(test_id)
+);
+
+CREATE TABLE IF NOT EXISTS packets (
+  packet_id     TEXT PRIMARY KEY,
+  company_id    INTEGER NOT NULL,
+  tech_id       TEXT,
+  visit_date    TEXT NOT NULL,
+  filename      TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+CREATE TABLE IF NOT EXISTS schedules (
+  schedule_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id    INTEGER NOT NULL,
+  tech_id       TEXT,
+  visit_date    TEXT NOT NULL,
+  notes         TEXT,
+  completed     INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+
+`
+
+export async function initSchema() {
+  const db = getDB()
+  db.run(CREATE_TABLES)
+
+  // ---------------------------------------------------------------------------
+  // Column migrations — safe to run on every boot
+  // ---------------------------------------------------------------------------
+
+  try { db.run('ALTER TABLE techs ADD COLUMN folder_name TEXT') }  catch { /* exists */ }
+  try { db.run('ALTER TABLE techs ADD COLUMN iat_number TEXT') }   catch { /* exists */ }
+
+  try { db.run('ALTER TABLE tests ADD COLUMN referral_given_to_worker  INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
+  try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_to_employer INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
+  try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_date TEXT') }                              catch { /* exists */ }
+
+  // Note: org profile fields use the settings key/value table — no column migration needed
+
+  // ---------------------------------------------------------------------------
+  // Data migrations
+  // ---------------------------------------------------------------------------
+
+  // AB Rule 5 — Standard Threshold Shift (STS)
+  try {
+    run(`INSERT OR IGNORE INTO classification_rules
+      (rule_id, province_code, category_code, category_label, rule_type,
+       threshold_db, freq_range_low, freq_range_high, comparison_basis,
+       followup_months, requires_referral, priority, effective_date, notes)
+      VALUES (5, 'AB', 'EW', 'Standard Threshold Shift', 'STS',
+       10, 2000, 4000, 'baseline', null, 0, 60, '2020-01-01',
+       'STS: average shift >= 10 dB at 2000, 3000, 4000 Hz in either ear — OHS Code Part 16.')`)
+  } catch { /* safe */ }
+
+  // AB EW counsel template
+  try {
+    run(`INSERT OR IGNORE INTO counsel_templates
+      (template_id, province_code, category_code, category_label, summary_text, tech_notes)
+      VALUES (3, 'AB', 'EW', 'Standard Threshold Shift',
+       'Your hearing test today shows a Standard Threshold Shift (STS) of [shift] dB averaged at 2000, 3000, and 4000 Hz in your [ear] ear compared to your baseline. Under Alberta OHS Code Part 16, this result must be recorded and the findings must be forwarded to a physician or audiologist for review within 30 days. Please ensure you are wearing your hearing protection correctly and consistently in all noisy work areas.',
+       'STS detected — average shift of [shift] dB at 2K+3K+4K Hz ([ear] ear) vs baseline. Required actions under AB OHS Code Part 16:
+
+1. Advise worker of results within 30 days.
+2. Forward results, medical history, and baseline audiogram to designated physician or audiologist for assessment.
+3. Physician/audiologist must advise worker of confirmation within 30 days of receiving results.
+
+Discuss HPD fit, type, and consistent use. Document any tinnitus complaints. Next test follows normal schedule (annual or biennial as applicable).')`)
+  } catch { /* safe */ }
+
+  // Keep AB EW counsel text current
+  try {
+    run(`UPDATE counsel_templates
+         SET summary_text = 'Your hearing test today shows a Standard Threshold Shift (STS) of [shift] dB averaged at 2000, 3000, and 4000 Hz in your [ear] ear compared to your baseline. Under Alberta OHS Code Part 16, this result must be recorded and the findings must be forwarded to a physician or audiologist for review within 30 days. Please ensure you are wearing your hearing protection correctly and consistently in all noisy work areas.',
+             tech_notes   = 'STS detected — average shift of [shift] dB at 2K+3K+4K Hz ([ear] ear) vs baseline. Required actions under AB OHS Code Part 16:
+
+1. Advise worker of results within 30 days.
+2. Forward results, medical history, and baseline audiogram to designated physician or audiologist for assessment.
+3. Physician/audiologist must advise worker of confirmation within 30 days of receiving results.
+
+Discuss HPD fit, type, and consistent use. Document any tinnitus complaints. Next test follows normal schedule (annual or biennial as applicable).'
+         WHERE template_id = 3 AND province_code = 'AB'`)
+  } catch { /* safe */ }
+
+  // BC NC label fixes
+  try { run(`UPDATE classification_rules SET category_label = 'Normal Change' WHERE rule_id = 105 AND province_code = 'BC'`) } catch { /* safe */ }
+  try { run(`UPDATE counsel_templates SET category_label = 'Normal Change (Periodic)' WHERE template_id = 13 AND province_code = 'BC'`) } catch { /* safe */ }
+
+  // BC N display rule
+  try {
+    run(`INSERT OR IGNORE INTO classification_rules
+      (rule_id, province_code, category_code, category_label, rule_type,
+       threshold_db, freq_range_low, freq_range_high, comparison_basis,
+       followup_months, requires_referral, priority, effective_date, notes)
+      VALUES (106, 'BC', 'N', 'Normal', 'default', 0, null, null, 'current',
+       null, 0, 1, '2020-01-01', 'Baseline N fallback — display only.')`)
+  } catch { /* safe */ }
+
+  // Seed provinces if empty
+  const existing = query('SELECT COUNT(*) AS n FROM provinces')[0]?.n ?? 0
+  if (existing === 0) await seedProvinces()
+}
+
+async function seedProvinces() {
+  const provinces = [
+    { code: 'AB', name: 'Alberta',          ref: 'OHS Code Part 16, Schedule 3' },
+    { code: 'BC', name: 'British Columbia',  ref: 'WorkSafeBC Audiometric Testing Guidelines' },
+    { code: 'SK', name: 'Saskatchewan',      ref: 'OHS Regulations 1996, s.113' }
+  ]
+
+  for (const p of provinces) {
+    run('INSERT OR IGNORE INTO provinces (province_code, province_name, regulation_ref) VALUES (?, ?, ?)',
+      [p.code, p.name, p.ref])
+
+    try {
+      const rulesResp = await fetch(`../shared/rules/${p.code}.json`)
+      const rulesData = await rulesResp.json()
+      for (const r of rulesData.rules) {
+        run(`INSERT OR IGNORE INTO classification_rules
+          (rule_id, province_code, category_code, category_label, rule_type,
+           threshold_db, freq_range_low, freq_range_high, comparison_basis,
+           followup_months, requires_referral, priority, effective_date, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [r.rule_id, r.province_code, r.category_code, r.category_label,
+           r.rule_type, r.threshold_db, r.freq_range_low ?? null, r.freq_range_high ?? null,
+           r.comparison_basis, r.followup_months ?? null, r.requires_referral ? 1 : 0,
+           r.priority, r.effective_date ?? null, r.notes ?? null])
+      }
+    } catch (e) { console.warn(`Could not seed rules for ${p.code}:`, e) }
+
+    try {
+      const counselResp = await fetch(`../shared/counsel/${p.code}.json`)
+      const counselData = await counselResp.json()
+      for (const t of counselData.templates) {
+        run(`INSERT OR IGNORE INTO counsel_templates
+          (template_id, province_code, category_code, category_label, summary_text, tech_notes)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+          [t.template_id, t.province_code, t.category_code, t.category_label,
+           t.summary_text, t.tech_notes ?? null])
+      }
+    } catch (e) { console.warn(`Could not seed counsel for ${p.code}:`, e) }
+  }
+}

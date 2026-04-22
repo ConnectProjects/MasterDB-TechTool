@@ -1,0 +1,315 @@
+import { query, queryOne, run }  from '../db/sqlite.js'
+import { openReferralPrintWindow } from '@shared/referral-form.js'
+
+const REFERRAL_CATS = new Set(['A', 'AC', 'EW'])
+
+export function renderEmployeeDetail(container, state, navigate) {
+  const empId = state.currentEmployee?.employee_id
+  if (!empId) { navigate('companies'); return }
+
+  redraw(container, state, navigate, empId)
+}
+
+function redraw(container, state, navigate, empId) {
+  const emp = queryOne(`
+    SELECT e.*, c.name AS company_name, c.province, c.company_id
+    FROM employees e
+    JOIN companies c ON c.company_id = e.company_id
+    WHERE e.employee_id = ?
+  `, [empId])
+  if (!emp) { navigate('companies'); return }
+
+  const baseline = queryOne(`
+    SELECT * FROM baselines WHERE employee_id = ? AND archived = 0
+    ORDER BY test_date DESC LIMIT 1
+  `, [empId])
+
+  const tests = query(`
+    SELECT t.*, h.hpd_make_model, h.rated_nrr, h.derated_nrr, h.lex8hr, h.protected_exposure, h.adequacy
+    FROM tests t
+    LEFT JOIN hpd_assessments h ON h.test_id = t.test_id
+    WHERE t.employee_id = ?
+    ORDER BY t.test_date DESC
+  `, [empId])
+
+  // Load org profile for referral form
+  const orgProfile = loadOrgProfile()
+
+  const company = { name: emp.company_name, province: emp.province }
+
+  container.innerHTML = `
+    <div class="page">
+      <div class="page-header">
+        <div class="breadcrumb">
+          <button class="btn btn-link" id="btn-back-companies">Companies</button>
+          <span>›</span>
+          <button class="btn btn-link" id="btn-back-company">${esc(emp.company_name)}</button>
+          <span>›</span>
+          <span>${esc(emp.last_name)}, ${esc(emp.first_name)}</span>
+        </div>
+      </div>
+
+      <!-- Employee header -->
+      <div class="company-hero" style="margin-bottom:16px">
+        <div class="company-hero-info">
+          <h1>${esc(emp.last_name)}, ${esc(emp.first_name)}</h1>
+          <div class="company-meta">
+            <span class="province-badge">${esc(emp.province)}</span>
+            ${emp.job_title ? `<span>${esc(emp.job_title)}</span>` : ''}
+            ${emp.dob ? `<span>DOB: ${esc(emp.dob)}</span>` : ''}
+            <span class="badge ${emp.status === 'active' ? 'badge-success' : 'badge-neutral'}">${esc(emp.status ?? 'active')}</span>
+          </div>
+        </div>
+        <div class="company-kpis">
+          <div class="ckpi"><span class="ckpi-n">${tests.length}</span><span>Tests</span></div>
+          <div class="ckpi ${baseline ? '' : 'ckpi--warn'}">
+            <span class="ckpi-n">${baseline ? '✓' : '✗'}</span>
+            <span>Baseline</span>
+          </div>
+          <div class="ckpi ${tests.some(t => t.sts_flag) ? 'ckpi--warn' : ''}">
+            <span class="ckpi-n">${tests.filter(t => t.sts_flag).length}</span>
+            <span>STS Flags</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Baseline audiogram -->
+      ${baseline ? `
+        <div class="form-card" style="margin-bottom:16px">
+          <div class="form-card-header">
+            <h2>Baseline Audiogram <span class="td-muted" style="font-size:12px;font-weight:400">· ${esc(baseline.test_date)}</span></h2>
+          </div>
+          ${buildAudiogramCard(baseline, null, false)}
+        </div>
+      ` : `
+        <div class="alert alert-warn" style="margin-bottom:16px">
+          No baseline on file. Periodic tests cannot be fully classified until a baseline is recorded.
+        </div>
+      `}
+
+      <!-- Test history -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <h2>Test History</h2>
+        </div>
+        ${tests.length === 0
+          ? '<p class="empty-note" style="padding:16px">No test records on file.</p>'
+          : tests.map(t => renderTestCard(t, baseline, emp, company, orgProfile)).join('')
+        }
+      </div>
+    </div>
+  `
+
+  container.querySelector('#btn-back-companies').addEventListener('click', () => navigate('companies'))
+  container.querySelector('#btn-back-company').addEventListener('click', () =>
+    navigate('company-detail', { currentCompany: { company_id: emp.company_id } })
+  )
+
+  // Wire referral buttons
+  container.querySelectorAll('.btn-print-referral').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const testId = Number(btn.dataset.testId)
+      const test   = tests.find(t => t.test_id === testId)
+      if (!test) return
+      const cls = parseClassification(test.classification)
+      openReferralPrintWindow({
+        org:            orgProfile,
+        worker:         emp,
+        employer:       company,
+        test_date:      test.test_date,
+        test_type:      test.test_type,
+        classification: cls,
+        thresholds:     extractThresholds(test),
+        baseline:       baseline ? extractThresholds(baseline) : null,
+        counsel_text:   test.counsel_text ?? '',
+        tech:           getTechForTest(test.tech_id)
+      })
+    })
+  })
+
+  // Wire "Mark referral sent" buttons
+  container.querySelectorAll('.btn-mark-sent').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const testId = Number(btn.dataset.testId)
+      run(`UPDATE tests SET referral_sent_to_employer = 1, referral_sent_date = date('now')
+           WHERE test_id = ?`, [testId])
+      redraw(container, state, navigate, empId)
+    })
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Test card renderer
+// ---------------------------------------------------------------------------
+
+function renderTestCard(test, baseline, emp, company, orgProfile) {
+  const cls        = parseClassification(test.classification)
+  const cat        = cls?.category ?? null
+  const needsRef   = cat && REFERRAL_CATS.has(cat)
+  const refGiven   = !!test.referral_given_to_worker
+  const refSent    = !!test.referral_sent_to_employer
+  const sentDate   = test.referral_sent_date ?? null
+
+  return `
+    <div class="test-card ${test.sts_flag ? 'test-card--flagged' : ''}">
+      <div class="test-card-header">
+        <div class="test-card-meta">
+          <span class="test-date">${esc(test.test_date)}</span>
+          <span class="test-type">${esc(test.test_type)}</span>
+          ${cls ? `<span class="class-badge class-${(cat ?? 'n').toLowerCase()}">${esc(cat)}</span>` : ''}
+          ${test.sts_flag ? '<span class="sts-chip">STS</span>' : ''}
+        </div>
+        ${needsRef ? `
+          <div class="referral-status-row">
+            <span class="referral-status-item ${refGiven ? 'ref-done' : 'ref-pending'}">
+              ${refGiven ? '✓' : '○'} Given to worker
+            </span>
+            <span class="referral-status-item ${refSent ? 'ref-done' : 'ref-pending'}">
+              ${refSent ? '✓' : '○'} Sent to employer${sentDate ? ' · ' + esc(sentDate) : ''}
+            </span>
+            ${!refSent ? `<button class="btn btn-sm btn-outline btn-mark-sent" data-test-id="${test.test_id}">Mark Sent</button>` : ''}
+            <button class="btn btn-sm btn-ghost btn-print-referral" data-test-id="${test.test_id}">🖨 Referral Form</button>
+          </div>
+        ` : ''}
+      </div>
+
+      ${buildAudiogramCard(test, baseline ? extractThresholds(baseline) : null, test.test_type !== 'Baseline')}
+
+      ${test.counsel_text ? `
+        <div class="test-counsel">
+          <div class="test-counsel-label">Counsel</div>
+          <div class="test-counsel-text">${esc(test.counsel_text)}</div>
+        </div>
+      ` : ''}
+
+      ${test.tech_notes ? `
+        <div class="test-counsel">
+          <div class="test-counsel-label">Tech Notes</div>
+          <div class="test-counsel-text td-muted">${esc(test.tech_notes)}</div>
+        </div>
+      ` : ''}
+
+      ${test.hpd_make_model ? `
+        <div class="test-hpd-row">
+          <span class="test-hpd-label">HPD:</span>
+          <span>${esc(test.hpd_make_model)}</span>
+          <span class="td-muted">NRR ${test.rated_nrr} dB → ${test.derated_nrr?.toFixed(1)} dB derating</span>
+          <span class="td-muted">LEX: ${test.lex8hr} dB(A)</span>
+          <span class="badge ${adequacyClass(test.adequacy)}">${esc(test.adequacy ?? '—')}</span>
+        </div>
+      ` : ''}
+    </div>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Inline audiogram card
+// ---------------------------------------------------------------------------
+
+function buildAudiogramCard(test, baselineThresholds, showShifts) {
+  const FREQS      = [500, 1000, 2000, 3000, 4000, 6000, 8000]
+  const FREQ_LABELS= ['500', '1K', '2K', '3K', '4K', '6K', '8K']
+  const FREQ_KEYS  = {
+    left:  ['left_500','left_1k','left_2k','left_3k','left_4k','left_6k','left_8k'],
+    right: ['right_500','right_1k','right_2k','right_3k','right_4k','right_6k','right_8k']
+  }
+
+  function row(ear) {
+    return FREQ_KEYS[ear].map((key, i) => {
+      const val   = test[key]
+      const disp  = val != null ? String(val) : '—'
+      const shift = (showShifts && baselineThresholds && val != null && baselineThresholds[key] != null)
+        ? Number(val) - Number(baselineThresholds[key])
+        : null
+      const shiftStr = shift !== null
+        ? `<span class="threshold-shift ${shift > 0 ? 'shift-worse' : 'shift-better'}">${shift > 0 ? '+' : ''}${shift}</span>`
+        : ''
+      return `<td class="threshold-cell">${disp}${shiftStr}</td>`
+    }).join('')
+  }
+
+  return `
+    <div class="audiogram-card">
+      <table class="threshold-table">
+        <thead>
+          <tr>
+            <th class="th-ear"></th>
+            ${FREQ_LABELS.map(f => `<th>${f}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ear-right"><td class="th-ear">R</td>${row('right')}</tr>
+          <tr class="ear-left"><td class="th-ear">L</td>${row('left')}</tr>
+          ${showShifts && baselineThresholds ? `
+            <tr class="shift-row">
+              <td class="th-ear td-muted" style="font-size:10px">Δ R</td>
+              ${FREQ_KEYS.right.map(key => {
+                const cur  = test[key]
+                const base = baselineThresholds[key]
+                if (cur == null || base == null) return '<td>—</td>'
+                const s = Number(cur) - Number(base)
+                return `<td class="${s > 0 ? 'shift-worse' : s < 0 ? 'shift-better' : ''}">${s > 0 ? '+' : ''}${s}</td>`
+              }).join('')}
+            </tr>
+            <tr class="shift-row">
+              <td class="th-ear td-muted" style="font-size:10px">Δ L</td>
+              ${FREQ_KEYS.left.map(key => {
+                const cur  = test[key]
+                const base = baselineThresholds[key]
+                if (cur == null || base == null) return '<td>—</td>'
+                const s = Number(cur) - Number(base)
+                return `<td class="${s > 0 ? 'shift-worse' : s < 0 ? 'shift-better' : ''}">${s > 0 ? '+' : ''}${s}</td>`
+              }).join('')}
+            </tr>
+          ` : ''}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function loadOrgProfile() {
+  const get = (key) => queryOne(`SELECT value FROM settings WHERE key = ?`, [key])?.value ?? ''
+  return {
+    name:     get('org_name'),
+    address:  get('org_address'),
+    city:     get('org_city'),
+    province: get('org_province'),
+    postal:   get('org_postal'),
+    phone:    get('org_phone'),
+    email:    get('org_email'),
+    website:  get('org_website'),
+    logoUrl:  get('company_logo')
+  }
+}
+
+function getTechForTest(techId) {
+  if (!techId) return { name: '', iat_number: '' }
+  const t = queryOne('SELECT name, iat_number FROM techs WHERE tech_id = ?', [techId])
+  return t ?? { name: '', iat_number: '' }
+}
+
+function extractThresholds(record) {
+  const keys = ['left_500','left_1k','left_2k','left_3k','left_4k','left_6k','left_8k',
+                 'right_500','right_1k','right_2k','right_3k','right_4k','right_6k','right_8k']
+  const out = {}
+  for (const k of keys) out[k] = record[k] ?? null
+  return out
+}
+
+function parseClassification(val) {
+  if (!val) return null
+  try { return typeof val === 'string' ? JSON.parse(val) : val } catch { return null }
+}
+
+function adequacyClass(a) {
+  return { Adequate: 'badge-success', Marginal: 'badge-warn', Inadequate: 'badge-error' }[a] ?? 'badge-neutral'
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
