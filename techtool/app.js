@@ -13,7 +13,6 @@ import { renderQuestionnairePost } from './screens/questionnaire-post.js'
 import { renderTestEntry }      from './screens/test-entry.js'
 import { renderClassification } from './screens/classification.js'
 import { renderCounsel }        from './screens/counsel.js'
-import { renderHPD }            from './screens/hpd.js'
 import { renderSubmit }         from './screens/submit.js'
 import { renderSync }           from './screens/sync.js'
 import { renderSettings }       from './screens/settings.js'
@@ -39,7 +38,6 @@ export const state = {
   counselText:        '',         // editable counsel text
   techNotes:          '',         // tech's internal notes
   referralGivenToWorker: false,   // set by checkbox on counsel screen
-  hpdResult:          null,       // result from calcHPD()
   lastSync:           null,       // ISO string of last sync
   helpReturnScreen:   null,       // screen to return to from help
 
@@ -67,7 +65,6 @@ const SCREENS = {
   'test-entry':     renderTestEntry,
   'classification': renderClassification,
   'counsel':        renderCounsel,
-  'hpd':            renderHPD,
   'submit':         renderSubmit,
   'sync':           renderSync,
   'settings':       renderSettings,
@@ -92,7 +89,6 @@ const NAV_PARENT = {
   'test-entry':     'schedule',
   'classification': 'schedule',
   'counsel':        'schedule',
-  'hpd':            'schedule',
   'submit':         'schedule',
   'sync':           'schedule',
   'training':       'settings',
@@ -123,7 +119,6 @@ export function navigate(screen, params = {}) {
     state.counselText            = ''
     state.techNotes              = ''
     state.classResult            = null
-    state.hpdResult              = null
   }
   state.screen = screen
   Object.assign(state, params)

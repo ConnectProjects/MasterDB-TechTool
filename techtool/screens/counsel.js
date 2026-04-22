@@ -82,8 +82,7 @@ export function renderCounsel(container, state, navigate) {
       </main>
 
       <footer class="action-bar">
-        <button class="btn btn-ghost"   id="btn-skip-hpd">Skip HPD →</button>
-        <button class="btn btn-primary" id="btn-hpd">HPD Assessment →</button>
+        <button class="btn btn-primary" id="btn-submit">Finalize & Review →</button>
       </footer>
     </div>
   `
@@ -125,18 +124,6 @@ export function renderCounsel(container, state, navigate) {
     })
   }
 
-  function proceedToHPD() {
-    if (needsReferral && !state.referralGivenToWorker) {
-      container.querySelector('#referral-warn')?.classList.remove('hidden')
-      // Soft reminder — scroll to it but don't block
-      container.querySelector('#referral-warn')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      // Allow proceeding after a short delay (worker sees the warning)
-      setTimeout(() => navigate('hpd'), 1400)
-      return
-    }
-    navigate('hpd')
-  }
-
   function proceedToSubmit() {
     if (needsReferral && !state.referralGivenToWorker) {
       container.querySelector('#referral-warn')?.classList.remove('hidden')
@@ -147,8 +134,7 @@ export function renderCounsel(container, state, navigate) {
     navigate('submit')
   }
 
-  container.querySelector('#btn-hpd').addEventListener('click', proceedToHPD)
-  container.querySelector('#btn-skip-hpd').addEventListener('click', proceedToSubmit)
+  container.querySelector('#btn-submit').addEventListener('click', proceedToSubmit)
 }
 
 async function loadOrgProfile() {

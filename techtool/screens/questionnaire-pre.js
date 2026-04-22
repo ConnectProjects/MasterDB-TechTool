@@ -6,9 +6,7 @@ export function renderQuestionnairePre(container, state, navigate) {
     state.questionnaire.pre = {
       noise_2h: false,
       noise_2h_duration: '',
-      noise_work: false,
-      hpd_type: '',
-      hpd_trained: false
+      noise_work: false
     }
   }
 
@@ -54,27 +52,6 @@ export function renderQuestionnairePre(container, state, navigate) {
               Usually exposed to hazardous noise at work?
             </label>
           </div>
-
-          <div id="hpd-detail" class="q-sub-group" style="display: ${q.noise_work ? 'block' : 'none'}">
-            <div class="form-group" style="margin-bottom:0">
-              <label>What kind of hearing protection (HPD) do you use?</label>
-              <select id="q-hpd-type" class="select-input">
-                <option value="">— Select type —</option>
-                <option value="plugs" ${q.hpd_type === 'plugs' ? 'selected' : ''}>Plugs</option>
-                <option value="foam plugs" ${q.hpd_type === 'foam plugs' ? 'selected' : ''}>Foam Plugs</option>
-                <option value="ear muffs" ${q.hpd_type === 'ear muffs' ? 'selected' : ''}>Ear Muffs</option>
-                <option value="dual" ${q.hpd_type === 'dual' ? 'selected' : ''}>Dual (Plugs + Muffs)</option>
-                <option value="custom molded plugs" ${q.hpd_type === 'custom molded plugs' ? 'selected' : ''}>Custom Molded Plugs</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="q-item">
-            <label class="checkbox-label">
-              <input type="checkbox" id="q-hpd-trained" ${q.hpd_trained ? 'checked' : ''}>
-              Trained by employer on use of HPDs?
-            </label>
-          </div>
         </div>
       </main>
 
@@ -90,21 +67,13 @@ export function renderQuestionnairePre(container, state, navigate) {
     noise2hDetail.style.display = noise2hCheck.checked ? 'block' : 'none'
   })
 
-  const noiseWorkCheck = container.querySelector('#q-noise-work')
-  const hpdDetail = container.querySelector('#hpd-detail')
-  noiseWorkCheck.addEventListener('change', () => {
-    hpdDetail.style.display = noiseWorkCheck.checked ? 'block' : 'none'
-  })
-
   container.querySelector('#btn-back').addEventListener('click', () => navigate('employee-list'))
 
   container.querySelector('#btn-next').addEventListener('click', () => {
     state.questionnaire.pre = {
       noise_2h:          container.querySelector('#q-noise-2h').checked,
       noise_2h_duration: container.querySelector('#q-noise-2h-duration').value,
-      noise_work:        container.querySelector('#q-noise-work').checked,
-      hpd_type:          container.querySelector('#q-hpd-type').value,
-      hpd_trained:       container.querySelector('#q-hpd-trained').checked
+      noise_work:        container.querySelector('#q-noise-work').checked
     }
     navigate('test-entry')
   })

@@ -64,10 +64,6 @@ export function renderDashboard(container, state, navigate) {
           <div class="kpi-num">${stats.testsThisMonth}</div>
           <div class="kpi-lbl">Tests (30 days)</div>
         </div>
-        <div class="kpi-tile kpi-tile--warn ${stats.stsFlags > 0 ? '' : 'kpi-tile--ok'}">
-          <div class="kpi-num">${stats.stsFlags}</div>
-          <div class="kpi-lbl">STS Flags</div>
-        </div>
         <div class="kpi-tile kpi-tile--blue ${stats.incomingPackets > 0 ? 'kpi-tile--alert' : ''}" data-action="incoming">
           <div class="kpi-num">${stats.incomingPackets}</div>
           <div class="kpi-lbl">Incoming Packets</div>

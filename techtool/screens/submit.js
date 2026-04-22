@@ -46,22 +46,6 @@ export function renderSubmit(container, state, navigate) {
             : '<em>No counsel entered.</em>'}</p>
         </section>
 
-        ${hpd?.valid ? `
-          <section class="summary-card">
-            <h3>HPD Adequacy</h3>
-            <div class="summary-row">
-              <span>Result</span>
-              <span class="class-badge class-${hpd.adequacy.toLowerCase()}">${hpd.adequacy}</span>
-            </div>
-            <div class="summary-row">
-              <span>Protected exposure</span><span>${hpd.protected_exposure} dB(A)</span>
-            </div>
-            <div class="summary-row">
-              <span>HPD</span><span>${esc(hpd.hpd_model ?? '—')}</span>
-            </div>
-          </section>
-        ` : '<p class="muted">No HPD assessment recorded.</p>'}
-
         <div id="submit-error"   class="alert alert-error   hidden"></div>
         <div id="submit-success" class="alert alert-success hidden">
           ✓ Test saved. Returning to employee list…
@@ -74,10 +58,8 @@ export function renderSubmit(container, state, navigate) {
       </footer>
     </div>
   `
-
-  const backTarget = () => state.hpdResult !== null ? 'hpd' : 'counsel'
-  container.querySelector('#btn-back').addEventListener('click',  () => navigate(backTarget()))
-  container.querySelector('#btn-back2').addEventListener('click', () => navigate(backTarget()))
+  container.querySelector('#btn-back').addEventListener('click',  () => navigate('counsel'))
+  container.querySelector('#btn-back2').addEventListener('click', () => navigate('counsel'))
   container.querySelector('#btn-confirm').addEventListener('click', () => doSave(container, state, navigate))
 }
 
@@ -102,7 +84,6 @@ async function doSave(container, state, navigate) {
       classification: state.classResult,
       counsel_text:   state.counselText  ?? null,
       tech_notes:     state.techNotes    ?? null,
-      hpd_assessment: state.hpdResult    ?? null,
       questionnaire:  state.questionnaire ?? null,
       ...state.testData
     }

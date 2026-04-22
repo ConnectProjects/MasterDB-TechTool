@@ -121,14 +121,13 @@ dashboard: `
   <h2>Dashboard</h2>
   <p>The Dashboard gives you a quick overview of the current state of your hearing conservation program. It is the first screen you see when MasterDB opens.</p>
   <h3>KPI tiles</h3>
-  <p>The six tiles across the top show key numbers at a glance. Clicking the <strong>Companies</strong>, <strong>Active Employees</strong>, or <strong>Incoming Packets</strong> tiles navigates directly to that screen.</p>
+  <p>The tiles across the top show key numbers at a glance. Clicking the <strong>Companies</strong>, <strong>Active Employees</strong>, or <strong>Incoming Packets</strong> tiles navigates directly to that screen.</p>
   <table class="help-table">
     <thead><tr><th>Tile</th><th>What it shows</th></tr></thead>
     <tbody>
       <tr><td>Companies</td><td>Total active companies in the database</td></tr>
       <tr><td>Active Employees</td><td>Employees with active status across all companies</td></tr>
       <tr><td>Tests (30 days)</td><td>Test records entered or imported in the last 30 days</td></tr>
-      <tr><td>STS Flags</td><td>Employees with a Standard Threshold Shift flag. Red when greater than zero.</td></tr>
       <tr><td>Incoming Packets</td><td>Completed packets from techs awaiting review. Highlighted when packets are waiting.</td></tr>
       <tr><td>Pending (in field)</td><td>Packets that have been generated and sent but not yet returned</td></tr>
     </tbody>
@@ -186,6 +185,10 @@ employees: `
   </table>
   <h3>Baseline</h3>
   <p>Each employee should have one active baseline — the reference audiogram that all future periodic tests are compared against. The baseline is set automatically when a Baseline test is imported. You can also set or update it manually from the employee detail screen.</p>
+  <h3>Manual Test Entry</h3>
+  <p>You can manually add or edit test records for an employee without using the packet workflow. Open the employee, click <strong>Manual Test Entry</strong>, fill in the date and thresholds, and save. This is useful for entering historical data or fixing errors.</p>
+  <h3>Deleting Records</h3>
+  <p>To delete an employee or a specific test record, use the <strong>Delete</strong> or <strong>Remove</strong> buttons on their respective detail screens. This will permanently remove the data from the database.</p>
   <div class="alert alert-warn">
     If an employee has no baseline on file, periodic tests cannot be classified. Make sure all employees have a baseline before their first periodic test.
   </div>
@@ -223,7 +226,7 @@ incoming: `
     <div class="help-step"><span class="help-step-num">1</span><div>Click <strong>Review &amp; Import →</strong> on any waiting packet.</div></div>
     <div class="help-step"><span class="help-step-num">2</span><div>The Review Import screen shows every employee in the packet, their test results, and the classification assigned by TechTool.</div></div>
     <div class="help-step"><span class="help-step-num">3</span><div>Review the results. Employees who were not tested during this visit are shown in grey at the bottom.</div></div>
-    <div class="help-step"><span class="help-step-num">4</span><div>If everything looks correct, click <strong>Import Tests into MasterDB</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">4</span><div>Click <strong>Import Tests into MasterDB</strong> to finalize, OR click <strong>Reject</strong> if the packet. Rejected packets stay in the database with a "Rejected" status for future review.</div></div>
   </div>
   <h3>Warnings you may see</h3>
   <table class="help-table">

@@ -27,7 +27,6 @@ export function renderHelp(container, state, navigate) {
           <button class="help-nav-item" data-section="test-entry">Test Entry</button>
           <button class="help-nav-item" data-section="classification">Classification</button>
           <button class="help-nav-item" data-section="counsel">Counsel</button>
-          <button class="help-nav-item" data-section="hpd">HPD Assessment</button>
           <button class="help-nav-item" data-section="submit">Finalize Test</button>
           <button class="help-nav-item" data-section="sync">Submit Packet</button>
           <button class="help-nav-item" data-section="settings">Settings</button>
@@ -249,40 +248,17 @@ counsel: `
   <h3>Referral forms</h3>
   <p>When the result is Abnormal or STS, complete the referral to a physician or audiologist on-site during this session using the paper referral forms. You can also tap <strong>Print Referral Form</strong> to generate a printable form with the worker's details, audiogram, and counsel text pre-filled.</p>
   <h3>Proceeding</h3>
-  <p>Tap <strong>HPD Assessment →</strong> to proceed, or <strong>Skip HPD →</strong> to go directly to Finalize Test.</p>
-`,
-
-hpd: `
-  <h2>HPD Assessment</h2>
-  <p>Calculates whether the employee's hearing protector provides adequate protection given their noise exposure level.</p>
-  <table class="help-table">
-    <thead><tr><th>Field</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td>HPD Make / Model</td><td>The brand and model of the hearing protector</td></tr>
-      <tr><td>Rated NRR</td><td>The Noise Reduction Rating from the HPD packaging (dB)</td></tr>
-      <tr><td>TWA / LEX 8hr</td><td>The employee's 8-hour time-weighted average noise exposure in dB(A)</td></tr>
-    </tbody>
-  </table>
-  <p>TechTool applies the CSA Z94.2 derating methodology to calculate real-world protected exposure and compares it against the provincial action level.</p>
-  <table class="help-table">
-    <thead><tr><th>Result</th><th>Meaning</th></tr></thead>
-    <tbody>
-      <tr><td><span style="background:#f0fff4;color:#276749;border:1px solid #9ae6b4;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700">Adequate</span></td><td>Protected exposure is below the action level</td></tr>
-      <tr><td><span style="background:#fffbeb;color:#7b5e00;border:1px solid #f6e05e;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700">Marginal</span></td><td>Close to the action level — consider a higher-rated HPD</td></tr>
-      <tr><td><span style="background:#fff5f5;color:#9b2335;border:1px solid #feb2b2;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700">Inadequate</span></td><td>Exceeds the action level — higher-rated HPD required</td></tr>
-    </tbody>
-  </table>
+  <p>Tap <strong>Finalize & Review →</strong> to proceed and review the result before saving.</p>
 `,
 
 submit: `
   <h2>Finalize Test</h2>
-  <p>A summary review before the test record is saved to the packet. Shows the employee's classification result, counselling text, and HPD assessment (if recorded).</p>
+  <p>A summary review before the test record is saved to the packet. Shows the employee's classification result and counselling text.</p>
   <h3>Review checklist</h3>
   <div class="help-steps">
     <div class="help-step"><span class="help-step-num">1</span><div>The <strong>classification result</strong> is correct for this employee.</div></div>
     <div class="help-step"><span class="help-step-num">2</span><div>The <strong>counsel text</strong> is appropriate and complete.</div></div>
-    <div class="help-step"><span class="help-step-num">3</span><div>The <strong>HPD result</strong> (if shown) reflects the correct device and exposure level.</div></div>
-    <div class="help-step"><span class="help-step-num">4</span><div>If the result is Abnormal or STS, the <strong>referral form has been completed</strong> on-site during counsel.</div></div>
+    <div class="help-step"><span class="help-step-num">3</span><div>If the result is Abnormal or STS, the <strong>referral form has been completed</strong> on-site during counsel.</div></div>
   </div>
   <p>Tap <strong>Confirm &amp; Save</strong> to write the test record to the packet. TechTool returns to the Employee List automatically.</p>
   <div class="alert alert-warn">Once saved, to correct a test you would need to re-test the employee from the Employee List.</div>
@@ -340,16 +316,15 @@ workflow: `
     <div class="help-step"><span class="help-step-num">14</span><div>Review the result. Tap <strong>Re-enter</strong> if anything looks wrong.</div></div>
     <div class="help-step"><span class="help-step-num">15</span><div>Tap <strong>Counsel →</strong> and review or edit the counsel text.</div></div>
     <div class="help-step"><span class="help-step-num">16</span><div>If the result is Abnormal or STS, complete the referral form on-site now. Tap <strong>Print Referral Form</strong> if needed.</div></div>
-    <div class="help-step"><span class="help-step-num">17</span><div>Add any tech notes, then tap <strong>HPD Assessment →</strong> or <strong>Skip HPD →</strong>.</div></div>
-    <div class="help-step"><span class="help-step-num">18</span><div>If doing HPD: enter the HPD make/model, NRR, and LEX 8hr.</div></div>
-    <div class="help-step"><span class="help-step-num">19</span><div>Review the Finalize Test summary and tap <strong>Confirm &amp; Save</strong>.</div></div>
-    <div class="help-step"><span class="help-step-num">20</span><div>Repeat from step 9 for the next employee.</div></div>
+    <div class="help-step"><span class="help-step-num">17</span><div>Add any tech notes, then tap <strong>Finalize & Review →</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">18</span><div>Review the Finalize Test summary and tap <strong>Confirm &amp; Save</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">19</span><div>Repeat from step 9 for the next employee.</div></div>
   </div>
   <h3>End of visit</h3>
   <div class="help-steps">
-    <div class="help-step"><span class="help-step-num">21</span><div>When all employees are resolved, tap <strong>Submit Packet →</strong>.</div></div>
-    <div class="help-step"><span class="help-step-num">22</span><div>Tap <strong>Submit to Sync Folder</strong>. Connect the sync folder if prompted.</div></div>
-    <div class="help-step"><span class="help-step-num">23</span><div>Wait for the success confirmation. The visit is complete.</div></div>
+    <div class="help-step"><span class="help-step-num">20</span><div>When all employees are resolved, tap <strong>Submit Packet →</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">21</span><div>Tap <strong>Submit to Sync Folder</strong>. Connect the sync folder if prompted.</div></div>
+    <div class="help-step"><span class="help-step-num">22</span><div>Wait for the success confirmation. The visit is complete.</div></div>
   </div>
 `,
 
