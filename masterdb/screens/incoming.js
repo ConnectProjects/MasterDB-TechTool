@@ -37,6 +37,18 @@ export function renderIncoming(container, state, navigate) {
       navigate('import-confirm', { params: { packetId } })
     })
   })
+
+  container.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const packetId = btn.dataset.packetId
+      if (!confirm('Reject this packet? It will be removed from the review list.')) return
+      
+      // Update status in DB
+      run('UPDATE packets SET status = "rejected", updated_at = datetime("now") WHERE packet_id = ?', [packetId])
+      
+      navigate('incoming')
+    })
+  })
 }
 
 function incomingCard(p) {
@@ -53,6 +65,9 @@ function incomingCard(p) {
       <div class="incoming-card__actions">
         <button class="btn btn-primary btn-sm btn-review" data-packet-id="${esc(p.packet_id)}">
           Review &amp; Import →
+        </button>
+        <button class="btn btn-ghost btn-sm btn-reject" data-packet-id="${esc(p.packet_id)}" style="color:var(--red);margin-top:8px">
+          Reject
         </button>
       </div>
     </div>

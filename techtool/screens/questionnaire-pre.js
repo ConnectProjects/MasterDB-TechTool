@@ -22,44 +22,54 @@ export function renderQuestionnairePre(container, state, navigate) {
       </header>
 
       <main class="screen-body">
-        <div class="form-section">
-          <div class="form-group">
+        <div class="q-card">
+          <div class="q-title">Recent Exposure</div>
+          
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-noise-2h" ${q.noise_2h ? 'checked' : ''}>
               Exposed to hazardous noise in last 2 hours?
             </label>
           </div>
 
-          <div id="noise-2h-detail" class="form-group indent-group" style="display: ${q.noise_2h ? 'block' : 'none'}">
-            <label>For how long?</label>
-            <select id="q-noise-2h-duration" class="select-input">
-              <option value="">— Select duration —</option>
-              <option value="under 2 hrs" ${q.noise_2h_duration === 'under 2 hrs' ? 'selected' : ''}>Under 2 hrs</option>
-              <option value="2-4 hrs" ${q.noise_2h_duration === '2-4 hrs' ? 'selected' : ''}>2-4 hrs</option>
-              <option value="4 or more hrs" ${q.noise_2h_duration === '4 or more hrs' ? 'selected' : ''}>4 or more hrs</option>
-            </select>
+          <div id="noise-2h-detail" class="q-sub-group" style="display: ${q.noise_2h ? 'block' : 'none'}">
+            <div class="form-group" style="margin-bottom:0">
+              <label>For how long?</label>
+              <select id="q-noise-2h-duration" class="select-input">
+                <option value="">— Select duration —</option>
+                <option value="under 2 hrs" ${q.noise_2h_duration === 'under 2 hrs' ? 'selected' : ''}>Under 2 hrs</option>
+                <option value="2-4 hrs" ${q.noise_2h_duration === '2-4 hrs' ? 'selected' : ''}>2-4 hrs</option>
+                <option value="4 or more hrs" ${q.noise_2h_duration === '4 or more hrs' ? 'selected' : ''}>4 or more hrs</option>
+              </select>
+            </div>
           </div>
+        </div>
 
-          <div class="form-group">
+        <div class="q-card">
+          <div class="q-title">Work Habits</div>
+
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-noise-work" ${q.noise_work ? 'checked' : ''}>
               Usually exposed to hazardous noise at work?
             </label>
           </div>
 
-          <div id="hpd-detail" class="form-group indent-group" style="display: ${q.noise_work ? 'block' : 'none'}">
-            <label>What kind of hearing protection (HPD) do you use?</label>
-            <select id="q-hpd-type" class="select-input">
-              <option value="">— Select type —</option>
-              <option value="plugs" ${q.hpd_type === 'plugs' ? 'selected' : ''}>Plugs</option>
-              <option value="foam plugs" ${q.hpd_type === 'foam plugs' ? 'selected' : ''}>Foam Plugs</option>
-              <option value="ear muffs" ${q.hpd_type === 'ear muffs' ? 'selected' : ''}>Ear Muffs</option>
-              <option value="dual" ${q.hpd_type === 'dual' ? 'selected' : ''}>Dual (Plugs + Muffs)</option>
-              <option value="custom molded plugs" ${q.hpd_type === 'custom molded plugs' ? 'selected' : ''}>Custom Molded Plugs</option>
-            </select>
+          <div id="hpd-detail" class="q-sub-group" style="display: ${q.noise_work ? 'block' : 'none'}">
+            <div class="form-group" style="margin-bottom:0">
+              <label>What kind of hearing protection (HPD) do you use?</label>
+              <select id="q-hpd-type" class="select-input">
+                <option value="">— Select type —</option>
+                <option value="plugs" ${q.hpd_type === 'plugs' ? 'selected' : ''}>Plugs</option>
+                <option value="foam plugs" ${q.hpd_type === 'foam plugs' ? 'selected' : ''}>Foam Plugs</option>
+                <option value="ear muffs" ${q.hpd_type === 'ear muffs' ? 'selected' : ''}>Ear Muffs</option>
+                <option value="dual" ${q.hpd_type === 'dual' ? 'selected' : ''}>Dual (Plugs + Muffs)</option>
+                <option value="custom molded plugs" ${q.hpd_type === 'custom molded plugs' ? 'selected' : ''}>Custom Molded Plugs</option>
+              </select>
+            </div>
           </div>
 
-          <div class="form-group">
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-hpd-trained" ${q.hpd_trained ? 'checked' : ''}>
               Trained by employer on use of HPDs?

@@ -1,4 +1,6 @@
 import { query, queryOne, run }  from '../db/sqlite.js'
+import { deleteTest, createTest, updateTest } from '../db/tests.js'
+import { createBaseline } from '../db/employees.js'
 import { openReferralPrintWindow } from '@shared/referral-form.js'
 
 const REFERRAL_CATS = new Set(['A', 'AC', 'EW'])
@@ -87,15 +89,68 @@ function redraw(container, state, navigate, empId) {
         </div>
       `}
 
-      <!-- Test history -->
       <div class="form-card">
         <div class="form-card-header">
           <h2>Test History</h2>
+          <button class="btn btn-outline btn-sm" id="btn-manual-test" style="margin-left:auto">+ Manual Entry</button>
         </div>
         ${tests.length === 0
           ? '<p class="empty-note" style="padding:16px">No test records on file.</p>'
           : tests.map(t => renderTestCard(t, baseline, emp, company, orgProfile)).join('')
         }
+      </div>
+    </div>
+
+    <!-- Manual Test Modal -->
+    <div id="modal-test" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-box modal-box--wide">
+        <div class="modal-header">
+          <h2>Manual Test Entry</h2>
+          <button class="modal-close" id="modal-close-test">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="mt-test-id" value="" />
+          <p class="section-note" style="margin-bottom:12px">Note: Manual entry does not perform auto-classification. Use TechTool for full diagnostic logic.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Test Date *</label>
+              <input type="date" id="mt-date" value="${new Date().toISOString().slice(0,10)}" />
+            </div>
+            <div class="form-group">
+              <label>Test Type *</label>
+              <select id="mt-type">
+                <option value="Periodic">Periodic</option>
+                <option value="Baseline">Baseline</option>
+                <option value="Re-test">Re-test</option>
+              </select>
+            </div>
+          </div>
+          <div class="audiogram-card" style="margin-top:16px">
+            <table class="threshold-table">
+              <thead>
+                <tr>
+                  <th class="th-ear"></th>
+                  <th>500</th><th>1K</th><th>2K</th><th>3K</th><th>4K</th><th>6K</th><th>8K</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="ear-right">
+                  <td class="th-ear">R</td>
+                  ${[500,1,2,3,4,6,8].map(f => `<td><input type="number" class="thresh-input" data-ear="right" data-freq="${f===1?'1k':f===1000?'1k':f+'k'}" style="width:50px;text-align:center" /></td>`).join('').replace(/500k/g, '500')}
+                </tr>
+                <tr class="ear-left">
+                  <td class="th-ear">L</td>
+                  ${[500,1,2,3,4,6,8].map(f => `<td><input type="number" class="thresh-input" data-ear="left" data-freq="${f===1?'1k':f===1000?'1k':f+'k'}" style="width:50px;text-align:center" /></td>`).join('').replace(/500k/g, '500')}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" id="btn-cancel-test">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-test">Save Test</button>
+        </div>
       </div>
     </div>
   `
@@ -136,6 +191,85 @@ function redraw(container, state, navigate, empId) {
       redraw(container, state, navigate, empId)
     })
   })
+
+  // Wire Delete Test buttons
+  container.querySelectorAll('.btn-delete-test').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const testId = Number(btn.dataset.testId)
+      const test   = tests.find(t => t.test_id === testId)
+      if (!test) return
+      if (!confirm(`Permanently delete the test from ${test.test_date}? This cannot be undone.`)) return
+      
+      deleteTest(testId)
+      redraw(container, state, navigate, empId)
+    })
+  })
+
+  // Manual Test Modal Handlers
+  const testModal = container.querySelector('#modal-test')
+  container.querySelector('#btn-manual-test').addEventListener('click', () => {
+    container.querySelector('#mt-test-id').value = ''
+    container.querySelector('#mt-date').value    = new Date().toISOString().slice(0,10)
+    container.querySelector('#mt-type').value    = 'Periodic'
+    container.querySelectorAll('.thresh-input').forEach(i => i.value = '')
+    testModal.classList.remove('hidden')
+  })
+
+  container.querySelectorAll('.btn-edit-test').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const testId = Number(btn.dataset.testId)
+      const test   = tests.find(t => t.test_id === testId)
+      if (!test) return
+
+      container.querySelector('#mt-test-id').value = testId
+      container.querySelector('#mt-date').value    = test.test_date
+      container.querySelector('#mt-type').value    = test.test_type
+      container.querySelectorAll('.thresh-input').forEach(input => {
+        const ear  = input.dataset.ear
+        const freq = input.dataset.freq
+        input.value = test[`${ear}_${freq}`] ?? ''
+      })
+      testModal.classList.remove('hidden')
+    })
+  })
+
+  container.querySelector('#btn-cancel-test').addEventListener('click', () => testModal.classList.add('hidden'))
+  container.querySelector('#modal-close-test').addEventListener('click', () => testModal.classList.add('hidden'))
+
+  container.querySelector('#btn-save-test').addEventListener('click', () => {
+    const testId = container.querySelector('#mt-test-id').value
+    const date = container.querySelector('#mt-date').value
+    const type = container.querySelector('#mt-type').value
+    if (!date) { alert('Date is required.'); return }
+
+    const thresholds = {}
+    container.querySelectorAll('.thresh-input').forEach(input => {
+      const ear = input.dataset.ear
+      const freq = input.dataset.freq
+      thresholds[`${ear}_${freq}`] = input.value ? Number(input.value) : null
+    })
+
+    const data = {
+      employee_id: empId,
+      test_date:   date,
+      test_type:   type,
+      province:    emp.province,
+      ...thresholds
+    }
+
+    if (testId) {
+      updateTest(Number(testId), data)
+    } else {
+      createTest(data)
+    }
+
+    if (type === 'Baseline') {
+      createBaseline(empId, date, thresholds)
+    }
+
+    testModal.classList.add('hidden')
+    redraw(container, state, navigate, empId)
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +292,12 @@ function renderTestCard(test, baseline, emp, company, orgProfile) {
           <span class="test-type">${esc(test.test_type)}</span>
           ${cls ? `<span class="class-badge class-${(cat ?? 'n').toLowerCase()}">${esc(cat)}</span>` : ''}
           ${test.sts_flag ? '<span class="sts-chip">STS</span>' : ''}
+          <button class="btn btn-link btn-sm btn-edit-test" data-test-id="${test.test_id}" style="text-decoration:none">
+            Edit
+          </button>
+          <button class="btn btn-link btn-sm btn-delete-test" data-test-id="${test.test_id}" style="color:var(--red);text-decoration:none">
+            Remove Test
+          </button>
         </div>
         ${needsRef ? `
           <div class="referral-status-row">

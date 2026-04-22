@@ -54,6 +54,10 @@ export function updateEmployee(employeeId, data) {
   )
 }
 
+export function deleteEmployee(employeeId) {
+  run('DELETE FROM employees WHERE employee_id = ?', [employeeId])
+}
+
 // ---------------------------------------------------------------------------
 // Baselines
 // ---------------------------------------------------------------------------

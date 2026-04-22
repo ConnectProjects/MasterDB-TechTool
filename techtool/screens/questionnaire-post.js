@@ -28,44 +28,50 @@ export function renderQuestionnairePost(container, state, navigate) {
       </header>
 
       <main class="screen-body">
-        <div class="form-section">
-          <div class="form-group">
+        <div class="q-card">
+          <div class="q-title">Medical History</div>
+          
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-ear-infection" ${q.ear_infection ? 'checked' : ''}>
               Ever had a severe ear infection?
             </label>
           </div>
 
-          <div class="form-group">
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-ear-surgery" ${q.ear_surgery ? 'checked' : ''}>
               Ever had ear surgery?
             </label>
           </div>
 
-          <div class="form-group">
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-head-injury" ${q.head_injury ? 'checked' : ''}>
               Ever had a serious head injury?
             </label>
           </div>
 
-          <div class="form-group">
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-childhood-loss" ${q.childhood_loss ? 'checked' : ''}>
               Hearing loss during childhood?
             </label>
           </div>
+        </div>
 
-          <div class="form-group">
+        <div class="q-card">
+          <div class="q-title">Ringing in Ears (Tinnitus)</div>
+          
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-tinnitus" ${q.tinnitus ? 'checked' : ''}>
-              Ringing in ears (tinnitus)?
+              Ringing in ears?
             </label>
           </div>
 
-          <div id="tinnitus-detail" class="form-group indent-group" style="display: ${q.tinnitus ? 'block' : 'none'}">
-            <div class="form-group">
+          <div id="tinnitus-detail" class="q-sub-group" style="display: ${q.tinnitus ? 'block' : 'none'}">
+            <div class="form-group" style="margin-bottom:12px">
               <label>Which ear?</label>
               <select id="q-tinnitus-ear" class="select-input">
                 <option value="">— Select ear —</option>
@@ -74,7 +80,7 @@ export function renderQuestionnairePost(container, state, navigate) {
                 <option value="both" ${q.tinnitus_ear === 'both' ? 'selected' : ''}>Both</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:0">
               <label>For how long?</label>
               <select id="q-tinnitus-duration" class="select-input">
                 <option value="">— Select duration —</option>
@@ -85,16 +91,20 @@ export function renderQuestionnairePost(container, state, navigate) {
               </select>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
+        <div class="q-card">
+          <div class="q-title">Recreational Noise</div>
+
+          <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-firearms" ${q.firearms ? 'checked' : ''}>
               Do you use firearms?
             </label>
           </div>
 
-          <div id="firearms-detail" class="form-group indent-group" style="display: ${q.firearms ? 'block' : 'none'}">
-            <div class="form-group">
+          <div id="firearms-detail" class="q-sub-group" style="display: ${q.firearms ? 'block' : 'none'}">
+            <div class="form-group" style="margin-bottom:12px">
               <label>Type?</label>
               <select id="q-firearms-type" class="select-input">
                 <option value="">— Select type —</option>
@@ -103,7 +113,7 @@ export function renderQuestionnairePost(container, state, navigate) {
                 <option value="both" ${q.firearms_type === 'both' ? 'selected' : ''}>Both</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:12px">
               <label>Which shoulder do you shoot from?</label>
               <select id="q-firearms-shoulder" class="select-input">
                 <option value="">— Select shoulder —</option>
@@ -111,7 +121,7 @@ export function renderQuestionnairePost(container, state, navigate) {
                 <option value="right" ${q.firearms_shoulder === 'right' ? 'selected' : ''}>Right</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:0">
               <label>How long have you used firearms?</label>
               <select id="q-firearms-duration" class="select-input">
                 <option value="">— Select duration —</option>

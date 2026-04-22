@@ -1958,3 +1958,34 @@ select.thresh-cell {
 }
 
 .req { color: var(--red, #9b2335); font-size: 12px; }
+
+/* ---- Questionnaire styling -------------------------------- */
+.q-card {
+  background: white;
+  border: 1px solid var(--grey-200);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.q-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--blue);
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--grey-100);
+  padding-bottom: 8px;
+}
+.q-item {
+  margin-bottom: 15px;
+}
+.q-item:last-child { margin-bottom: 0; }
+.q-sub-group {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--grey-50);
+  border-radius: 6px;
+  border-left: 3px solid var(--blue);
+}

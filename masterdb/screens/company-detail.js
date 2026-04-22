@@ -1,5 +1,5 @@
 import { getCompany, updateCompany, deactivateCompany, getHPDInventory, saveHPDInventory } from '../db/companies.js'
-import { getEmployeesByCompany, createEmployee, updateEmployee } from '../db/employees.js'
+import { getEmployeesByCompany, createEmployee, updateEmployee, deleteEmployee } from '../db/employees.js'
 import { getRecentTests, getSTSFlags } from '../db/tests.js'
 
 export function renderCompanyDetail(container, state, navigate) {
@@ -84,6 +84,7 @@ export function renderCompanyDetail(container, state, navigate) {
           ${employeeForm()}
         </div>
         <div class="modal-footer">
+          <button class="btn btn-sm btn-ghost hidden" id="btn-delete-emp" style="color:var(--red);margin-right:auto">Delete Employee</button>
           <button class="btn btn-ghost"   id="btn-cancel-emp">Cancel</button>
           <button class="btn btn-primary" id="btn-save-emp">Save Employee</button>
         </div>
@@ -253,6 +254,7 @@ function wireTabHandlers(container, companyId, company, employees, hpdInv, navig
   container.querySelector('#btn-add-emp')?.addEventListener('click', () => {
     container.querySelector('#emp-modal-title').textContent = 'Add Employee'
     container.querySelector('#emp-modal-body').innerHTML = employeeForm()
+    container.querySelector('#btn-delete-emp').classList.add('hidden')
     container.querySelector('#modal-emp').classList.remove('hidden')
   })
 
@@ -264,8 +266,22 @@ function wireTabHandlers(container, companyId, company, employees, hpdInv, navig
       if (!emp) return
       container.querySelector('#emp-modal-title').textContent = 'Edit Employee'
       container.querySelector('#emp-modal-body').innerHTML = employeeForm(emp)
+      container.querySelector('#btn-delete-emp').classList.remove('hidden')
       container.querySelector('#modal-emp').classList.remove('hidden')
     })
+  })
+
+  // Delete employee
+  container.querySelector('#btn-delete-emp')?.addEventListener('click', () => {
+    const editId = container.querySelector('#ef-emp-id')?.value
+    if (!editId) return
+    const emp = employees.find(em => String(em.employee_id) === editId)
+    if (!emp) return
+    if (!confirm(`Permanently delete ${emp.first_name} ${emp.last_name}? (Historical tests will remain on file but the employee will be removed from this list)`)) return
+    
+    deleteEmployee(Number(editId))
+    container.querySelector('#modal-emp').classList.add('hidden')
+    navigate('company-detail', { currentCompany: { company_id: companyId } })
   })
 
   // Employee row click → employee detail screen

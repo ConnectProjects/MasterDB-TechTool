@@ -80,6 +80,22 @@ export function createTest(data) {
   return lastInsertId()
 }
 
+export function updateTest(testId, data) {
+  run(`UPDATE tests SET
+    test_date = ?, test_type = ?, province = ?,
+    left_500 = ?, left_1k = ?, left_2k = ?, left_3k = ?, left_4k = ?, left_6k = ?, left_8k = ?,
+    right_500 = ?, right_1k = ?, right_2k = ?, right_3k = ?, right_4k = ?, right_6k = ?, right_8k = ?,
+    updated_at = datetime('now')
+    WHERE test_id = ?`,
+    [data.test_date, data.test_type ?? 'Periodic', data.province,
+     data.left_500  ?? null, data.left_1k  ?? null, data.left_2k  ?? null, data.left_3k  ?? null,
+     data.left_4k   ?? null, data.left_6k  ?? null, data.left_8k  ?? null,
+     data.right_500 ?? null, data.right_1k ?? null, data.right_2k ?? null, data.right_3k ?? null,
+     data.right_4k  ?? null, data.right_6k ?? null, data.right_8k ?? null,
+     testId]
+  )
+}
+
 export function createHPDAssessment(testId, hpd) {
   if (!hpd?.valid) return null
   run(`INSERT INTO hpd_assessments
@@ -89,6 +105,11 @@ export function createHPDAssessment(testId, hpd) {
      hpd.lex8hr, hpd.protected_exposure, hpd.adequacy]
   )
   return lastInsertId()
+}
+
+export function deleteTest(testId) {
+  run('DELETE FROM tests WHERE test_id = ?', [testId])
+  run('DELETE FROM hpd_assessments WHERE test_id = ?', [testId])
 }
 
 export function getDashboardStats() {

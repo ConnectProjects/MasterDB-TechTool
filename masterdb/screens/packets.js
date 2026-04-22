@@ -4,6 +4,7 @@ export function renderPackets(container, state, navigate) {
   const all       = getAllPackets()
   const pending   = all.filter(p => p.status === 'pending')
   const submitted = all.filter(p => p.status === 'submitted')
+  const rejected  = all.filter(p => p.status === 'rejected')
   const recent    = all.filter(p => p.status === 'imported' || p.status === 'archived').slice(0, 15)
 
   container.innerHTML = `
@@ -36,6 +37,17 @@ export function renderPackets(container, state, navigate) {
             <span class="section-desc-inline">Completed by tech — awaiting review and import.</span>
           </div>
           ${packetTable(submitted, true)}
+        </div>
+      ` : ''}
+
+      <!-- Rejected -->
+      ${rejected.length > 0 ? `
+        <div class="packets-group">
+          <div class="packets-group-head">
+            <h2>Rejected <span class="packets-count packets-count--warn">${rejected.length}</span></h2>
+            <span class="section-desc-inline">Packets review but not imported.</span>
+          </div>
+          ${packetTable(rejected, true)}
         </div>
       ` : ''}
 
@@ -106,7 +118,8 @@ function statusLabel(s) {
     pending:  'In Field',
     submitted:'Ready to Import',
     imported: 'Imported',
-    archived: 'Archived'
+    archived: 'Archived',
+    rejected: 'Rejected'
   }[s] ?? s
 }
 
