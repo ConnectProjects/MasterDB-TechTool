@@ -104,6 +104,13 @@ async function doUpload(container, state, navigate, pending) {
     for (const packet of pending) {
       try {
         addLog(`Saving ${packet.company?.name ?? packet.packet_id}…`)
+
+        // Ensure duration is captured if any tests were done
+        if (!packet.testing_duration) {
+          addLog(`✕ ${packet.company?.name}: Total testing duration is required. Please go to the company page to enter it.`, 'error')
+          continue
+        }
+
         markSubmitted(packet, state.user?.tech_id ?? 'unknown')
         await writeJsonFile(folder, 'inbox', packet.filename, packet)
         await savePacket(packet)

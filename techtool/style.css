@@ -2081,3 +2081,25 @@ select.thresh-cell {
   border-radius: 6px;
   border-left: 3px solid var(--blue);
 }
+
+/* Custom styles for duration box */
+.visit-duration-box {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--grey-50);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius);
+}
+.visit-duration-box label {
+  display: block;
+  font-weight: 700;
+  color: var(--grey-900);
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+.field-help {
+  font-size: 11px;
+  color: var(--grey-500);
+  margin-top: 6px;
+  font-style: italic;
+}

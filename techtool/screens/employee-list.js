@@ -87,7 +87,7 @@ export function renderEmployeeList(container, state, navigate) {
   container.querySelector('#btn-back').addEventListener('click', () => navigate('company'))
 
   if (allResolved) {
-    container.querySelector('#btn-submit-packet').addEventListener('click', () => navigate('sync'))
+    container.querySelector('#btn-submit-packet').addEventListener('click', () => navigate('company'))
   }
 
   const searchEl = container.querySelector('#emp-search')

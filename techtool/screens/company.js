@@ -50,17 +50,18 @@ export function renderCompany(container, state, navigate) {
           }
         </div>
 
-        ${allResolved ? `
-          <div class="form-group" style="margin: 16px 0 8px 0; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
-            <label for="test-duration" style="font-weight:600; color:var(--text-dark);">Actual Testing Duration (hrs)</label>
+        ${done > 0 || skipped > 0 ? `
+          <div class="form-group visit-duration-box">
+            <label for="test-duration">Actual Testing Duration (hrs)</label>
             <input type="text" id="test-duration" class="input-field" 
               placeholder="e.g. 4.5" 
-              value="${esc(packet.testing_duration ?? '')}"
-              style="margin-top:4px; border: 1px solid #ccc;">
-            <div style="font-size:11px; color:#666; margin-top:4px;">* Required to submit packet</div>
+              value="${esc(packet.testing_duration ?? '')}">
+            <div class="field-help">* Total time spent testing today (required for submission)</div>
           </div>
-          <button class="btn btn-primary btn-block" id="btn-submit" 
-            style="margin-bottom:16px;background:var(--green);border-color:var(--green);">
+        ` : ''}
+
+        ${allResolved ? `
+          <button class="btn btn-primary btn-block" id="btn-submit">
             Submit Packet →
           </button>
         ` : ''}
