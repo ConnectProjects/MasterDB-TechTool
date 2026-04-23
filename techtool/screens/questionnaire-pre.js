@@ -6,7 +6,8 @@ export function renderQuestionnairePre(container, state, navigate) {
     state.questionnaire.pre = {
       noise_2h: false,
       noise_2h_duration: '',
-      noise_work: false
+      wear_hpd: false,
+      employer_info: false
     }
   }
 
@@ -21,12 +22,12 @@ export function renderQuestionnairePre(container, state, navigate) {
 
       <main class="screen-body">
         <div class="q-card">
-          <div class="q-title">Recent Exposure</div>
+          <div class="q-title">Noise Exposure & Information</div>
           
           <div class="q-item">
             <label class="checkbox-label">
               <input type="checkbox" id="q-noise-2h" ${q.noise_2h ? 'checked' : ''}>
-              Exposed to hazardous noise in last 2 hours?
+              Have you been exposed to noise within the last two hours?
             </label>
           </div>
 
@@ -41,15 +42,18 @@ export function renderQuestionnairePre(container, state, navigate) {
               </select>
             </div>
           </div>
-        </div>
-
-        <div class="q-card">
-          <div class="q-title">Work Habits</div>
 
           <div class="q-item">
             <label class="checkbox-label">
-              <input type="checkbox" id="q-noise-work" ${q.noise_work ? 'checked' : ''}>
-              Usually exposed to hazardous noise at work?
+              <input type="checkbox" id="q-wear-hpd" ${q.wear_hpd ? 'checked' : ''}>
+              Do you regularly wear hearing protection when you work in a noisy environment?
+            </label>
+          </div>
+
+          <div class="q-item">
+            <label class="checkbox-label">
+              <input type="checkbox" id="q-employer-info" ${q.employer_info ? 'checked' : ''}>
+              Has your employer given you information about noise and noise induced hearing loss in the last year?
             </label>
           </div>
         </div>
@@ -73,7 +77,8 @@ export function renderQuestionnairePre(container, state, navigate) {
     state.questionnaire.pre = {
       noise_2h:          container.querySelector('#q-noise-2h').checked,
       noise_2h_duration: container.querySelector('#q-noise-2h-duration').value,
-      noise_work:        container.querySelector('#q-noise-work').checked
+      wear_hpd:          container.querySelector('#q-wear-hpd').checked,
+      employer_info:     container.querySelector('#q-employer-info').checked
     }
     navigate('test-entry')
   })

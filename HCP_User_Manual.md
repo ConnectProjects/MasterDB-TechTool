@@ -433,6 +433,12 @@ Your main working screen during a visit.
 **Adding an employee on-site**: Tap **+ Add Employee**. These will be created in MasterDB on import.
 
 #### 4. Testing Workflow
+**Pre-Test Questionnaire:**
+Mandatory survey before thresholds are entered:
+- **Noise Exposure**: Confirms if worker was exposed to noise within the last 2 hours.
+- **HPD Use**: Confirms if worker regularly wears hearing protection.
+- **Employer Info**: Confirms if noise/safety education was provided in the last year.
+
 **Test Entry:**
 - **Baseline**: Reference audiogram.
 - **Periodic**: Comparison test.

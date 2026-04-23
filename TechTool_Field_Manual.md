@@ -103,6 +103,12 @@ Your main working screen during a visit.
 
 ## 4. Testing Workflow
 
+### Pre-Test Questionnaire
+Mandatory survey conducted before thresholds are entered:
+*   **Noise Exposure**: Confirms if the worker has been exposed to noise within the last two hours.
+*   **HPD Use**: Confirms if the worker regularly wears hearing protection in noisy environments.
+*   **Employer Info**: Confirms if the employer provided noise-induced hearing loss education in the last year.
+
 ### Test Entry
 Where you record audiometric thresholds.
 

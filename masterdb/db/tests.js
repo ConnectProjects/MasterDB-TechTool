@@ -51,6 +51,7 @@ export function getOverdueTests(monthsThreshold = 24) {
 
 export function createTest(data) {
   const classJson = data.classification ? JSON.stringify(data.classification) : null
+  const qJson     = data.questionnaire    ? JSON.stringify(data.questionnaire)    : null
   const stsFlag   = data.classification?.category === 'EW'  ||
                     data.classification?.category === 'EWC' ||
                     data.classification?.category === 'A'   ||
@@ -61,8 +62,8 @@ export function createTest(data) {
      left_500, left_1k, left_2k, left_3k, left_4k, left_6k, left_8k,
      right_500, right_1k, right_2k, right_3k, right_4k, right_6k, right_8k,
      classification, triggered_rule_id, triggering_freq_hz, triggering_ear,
-     shift_db, sts_flag, counsel_text, tech_notes, packet_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     shift_db, sts_flag, counsel_text, tech_notes, questionnaire, packet_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [data.employee_id, data.test_date, data.tech_id ?? null, data.test_type ?? 'Periodic',
      data.province,
      data.left_500  ?? null, data.left_1k  ?? null, data.left_2k  ?? null, data.left_3k  ?? null,
@@ -75,7 +76,7 @@ export function createTest(data) {
      data.classification?.triggering_ear ?? null,
      data.classification?.shift_db ?? null,
      stsFlag,
-     data.counsel_text ?? null, data.tech_notes ?? null, data.packet_id ?? null]
+     data.counsel_text ?? null, data.tech_notes ?? null, qJson, data.packet_id ?? null]
   )
   return lastInsertId()
 }

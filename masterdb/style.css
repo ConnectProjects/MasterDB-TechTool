@@ -461,6 +461,33 @@ textarea { resize: vertical; }
 .drop-zone__sub  { font-size: 13px; color: var(--grey-500); }
 .drop-zone__sub .link-btn { color: var(--navy-mid); text-decoration: underline; cursor: pointer; }
 
+/* ---- Test questionnaire ---------------------------------- */
+.test-questionnaire {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grey-100);
+}
+.q-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.q-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.q-label {
+  color: var(--grey-500);
+  font-size: 12px;
+}
+.q-val {
+  font-weight: 500;
+  color: var(--grey-900);
+}
+
 /* ============================================================
    Employee Detail — threshold tables, test cards, referrals
    ============================================================ */

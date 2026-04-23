@@ -308,17 +308,18 @@ workflow: `
   </div>
   <h3>For each employee</h3>
   <div class="help-steps">
-    <div class="help-step"><span class="help-step-num">9</span><div>Tap the employee's name to open Test Entry.</div></div>
-    <div class="help-step"><span class="help-step-num">10</span><div>Conduct the audiometric test on the audiometer.</div></div>
-    <div class="help-step"><span class="help-step-num">11</span><div>Enter the thresholds, checking the live audiogram as you go.</div></div>
-    <div class="help-step"><span class="help-step-num">12</span><div>Tap <strong>Save Draft</strong> if you need to pause.</div></div>
-    <div class="help-step"><span class="help-step-num">13</span><div>Tap <strong>Classify →</strong> when all thresholds are entered.</div></div>
-    <div class="help-step"><span class="help-step-num">14</span><div>Review the result. Tap <strong>Re-enter</strong> if anything looks wrong.</div></div>
-    <div class="help-step"><span class="help-step-num">15</span><div>Tap <strong>Counsel →</strong> and review or edit the counsel text.</div></div>
-    <div class="help-step"><span class="help-step-num">16</span><div>If the result is Abnormal or STS, complete the referral form on-site now. Tap <strong>Print Referral Form</strong> if needed.</div></div>
-    <div class="help-step"><span class="help-step-num">17</span><div>Add any tech notes, then tap <strong>Finalize & Review →</strong>.</div></div>
-    <div class="help-step"><span class="help-step-num">18</span><div>Review the Finalize Test summary and tap <strong>Confirm &amp; Save</strong>.</div></div>
-    <div class="help-step"><span class="help-step-num">19</span><div>Repeat from step 9 for the next employee.</div></div>
+    <div class="help-step"><span class="help-step-num">9</span><div>Tap the employee's name to open the <strong>Pre-Test Questionnaire</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">10</span><div>Answer mandatory questions regarding recent noise exposure and hearing protection use.</div></div>
+    <div class="help-step"><span class="help-step-num">11</span><div>Conduct the audiometric test on the audiometer, then proceed to Test Entry.</div></div>
+    <div class="help-step"><span class="help-step-num">12</span><div>Enter the thresholds, checking the live audiogram as you go.</div></div>
+    <div class="help-step"><span class="help-step-num">13</span><div>Tap <strong>Save Draft</strong> if you need to pause.</div></div>
+    <div class="help-step"><span class="help-step-num">14</span><div>Tap <strong>Classify →</strong> when all thresholds are entered.</div></div>
+    <div class="help-step"><span class="help-step-num">15</span><div>Review the result. Tap <strong>Re-enter</strong> if anything looks wrong.</div></div>
+    <div class="help-step"><span class="help-step-num">16</span><div>Tap <strong>Counsel →</strong> and review or edit the counsel text.</div></div>
+    <div class="help-step"><span class="help-step-num">17</span><div>If the result is Abnormal or STS, complete the referral form on-site now. Tap <strong>Print Referral Form</strong> if needed.</div></div>
+    <div class="help-step"><span class="help-step-num">18</span><div>Add any tech notes, then tap <strong>Finalize & Review →</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">19</span><div>Review the Finalize Test summary and tap <strong>Confirm &amp; Save</strong>.</div></div>
+    <div class="help-step"><span class="help-step-num">20</span><div>Repeat from step 9 for the next employee.</div></div>
   </div>
   <h3>End of visit</h3>
   <div class="help-steps">

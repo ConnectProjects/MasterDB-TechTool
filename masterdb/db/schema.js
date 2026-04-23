@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS tests (
   referral_sent_date        TEXT,
   counsel_text              TEXT,
   tech_notes                TEXT,
+  questionnaire             TEXT,
   packet_id                 TEXT,
   created_at                TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id)
@@ -181,6 +182,7 @@ export async function initSchema() {
   try { db.run('ALTER TABLE tests ADD COLUMN referral_given_to_worker  INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
   try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_to_employer INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
   try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_date TEXT') }                              catch { /* exists */ }
+  try { db.run('ALTER TABLE tests ADD COLUMN questionnaire TEXT') }                                   catch { /* exists */ }
 
   // Note: org profile fields use the settings key/value table — no column migration needed
 

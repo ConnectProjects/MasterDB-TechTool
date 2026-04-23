@@ -300,6 +300,7 @@ async function doImport(container, packet, company, packetId, isOffline, navigat
             classification:           test.classification,
             counsel_text:             test.counsel_text,
             tech_notes:               test.tech_notes,
+            questionnaire:            test.questionnaire,
             referral_given_to_worker: test.referral_given_to_worker ?? 0,
             packet_id:                packet.packet_id
           })

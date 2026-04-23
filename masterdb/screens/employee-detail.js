@@ -284,6 +284,8 @@ function renderTestCard(test, baseline, emp, company, orgProfile) {
   const refSent    = !!test.referral_sent_to_employer
   const sentDate   = test.referral_sent_date ?? null
 
+  const questionnaire = test.questionnaire ? parseJson(test.questionnaire) : null
+
   return `
     <div class="test-card ${test.sts_flag ? 'test-card--flagged' : ''}">
       <div class="test-card-header">
@@ -314,6 +316,26 @@ function renderTestCard(test, baseline, emp, company, orgProfile) {
       </div>
 
       ${buildAudiogramCard(test, baseline ? extractThresholds(baseline) : null, test.test_type !== 'Baseline')}
+
+      ${questionnaire?.pre ? `
+        <div class="test-questionnaire">
+          <div class="test-counsel-label">Pre-Test Questionnaire</div>
+          <div class="q-grid">
+            <div class="q-item">
+              <span class="q-label">Noise < 2hrs:</span>
+              <span class="q-val">${questionnaire.pre.noise_2hrs ? `Yes (${questionnaire.pre.noise_duration})` : 'No'}</span>
+            </div>
+            <div class="q-item">
+              <span class="q-label">Wears HPD:</span>
+              <span class="q-val">${questionnaire.pre.wear_hpd ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="q-item">
+              <span class="q-label">Employer Info:</span>
+              <span class="q-val">${questionnaire.pre.employer_info ? 'Yes' : 'No'}</span>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       ${test.counsel_text ? `
         <div class="test-counsel">
@@ -442,6 +464,11 @@ function extractThresholds(record) {
 }
 
 function parseClassification(val) {
+  if (!val) return null
+  try { return typeof val === 'string' ? JSON.parse(val) : val } catch { return null }
+}
+
+function parseJson(val) {
   if (!val) return null
   try { return typeof val === 'string' ? JSON.parse(val) : val } catch { return null }
 }

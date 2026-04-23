@@ -263,16 +263,27 @@ function buildEmployeeReport(employeeId) {
 
   const testRows = tests.map(t => {
     const cat     = parseCat(t.classification)
+    const q       = t.questionnaire ? parseJson(t.questionnaire) : null
     const hpdText = t.adequacy
       ? `${esc(t.adequacy)}${t.derated_nrr != null ? ` (${t.derated_nrr} dB)` : ''}`
       : '—'
+    
+    const qLabels = []
+    if (q?.pre) {
+      if (q.pre.noise_2hrs) qLabels.push(`Noise < 2h (${q.pre.noise_duration})`)
+      if (q.pre.wear_hpd) qLabels.push(`Wears HPD`)
+      if (q.pre.employer_info) qLabels.push(`Emp Info`)
+    }
+    const qText = qLabels.length > 0 ? qLabels.join(', ') : '—'
+
     return `<tr>
       <td>${t.test_date}</td>
       <td>${esc(t.test_type)}</td>
       <td>${catBadge(cat)}</td>
       <td>${esc(t.tech_id ?? '—')}</td>
       <td>${hpdText}</td>
-      <td style="max-width:200px;font-size:12px;line-height:1.4">${t.tech_notes ? esc(t.tech_notes) : '—'}</td>
+      <td>${qText}</td>
+      <td style="max-width:180px;font-size:11px;line-height:1.3">${t.tech_notes ? esc(t.tech_notes) : '—'}</td>
     </tr>`
   }).join('')
 
@@ -310,7 +321,7 @@ function buildEmployeeReport(employeeId) {
         <div class="report-section-label">Test History (${tests.length} record${tests.length !== 1 ? 's' : ''})</div>
         <table class="report-table">
           <thead>
-            <tr><th>Date</th><th>Type</th><th>Result</th><th>Tech</th><th>HPD</th><th>Tech Notes</th></tr>
+            <tr><th>Date</th><th>Type</th><th>Result</th><th>Tech</th><th>HPD</th><th>Survey</th><th>Tech Notes</th></tr>
           </thead>
           <tbody>${testRows}</tbody>
         </table>
@@ -418,6 +429,11 @@ const CAT_CLASS = { N: 'n', EW: 'ew', A: 'a', NC: 'n', EWC: 'ew', AC: 'a' }
 function parseCat(classJson) {
   if (!classJson) return null
   try { return JSON.parse(classJson)?.category ?? null } catch { return null }
+}
+
+function parseJson(val) {
+  if (!val) return null
+  try { return typeof val === 'string' ? JSON.parse(val) : val } catch { return null }
 }
 
 function catBadge(cat) {
