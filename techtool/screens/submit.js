@@ -98,6 +98,10 @@ async function doSave(container, state, navigate) {
 
     btn.textContent = '✓ Saved'
     successEl.classList.remove('hidden')
+
+    // Empty the booth
+    state.currentEmployee = null
+    
     setTimeout(() => navigate('employee-list'), 1600)
   } catch (e) {
     errorEl.textContent = `Save failed: ${e.message}`

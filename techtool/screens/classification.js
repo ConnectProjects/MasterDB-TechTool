@@ -31,6 +31,63 @@ export function renderClassification(container, state, navigate) {
           <span class="result-label">${cfg.label}</span>
         </div>
 
+        <div class="result-detail-card" style="padding:0; overflow:hidden">
+          <table class="q-grid-table">
+            <thead>
+              <tr>
+                <th style="padding-left:12px; width:45px"></th>
+                <th>500</th><th>1K</th><th>2K</th><th>3K</th><th>4K</th><th>6K</th><th>8K</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="ear-right">
+                <td class="q-ear-label">R</td>
+                <td>${test.right_500 ?? '—'}</td>
+                <td>${test.right_1k  ?? '—'}</td>
+                <td>${test.right_2k  ?? '—'}</td>
+                <td>${test.right_3k  ?? '—'}</td>
+                <td>${test.right_4k  ?? '—'}</td>
+                <td>${test.right_6k  ?? '—'}</td>
+                <td>${test.right_8k  ?? '—'}</td>
+              </tr>
+              ${baseline ? `
+                <tr class="ear-right baseline-row" style="opacity:0.6; font-size:13px">
+                  <td class="q-ear-label" style="font-size:10px">Base R</td>
+                  <td>${baseline.right_500 ?? '—'}</td>
+                  <td>${baseline.right_1k  ?? '—'}</td>
+                  <td>${baseline.right_2k  ?? '—'}</td>
+                  <td>${baseline.right_3k  ?? '—'}</td>
+                  <td>${baseline.right_4k  ?? '—'}</td>
+                  <td>${baseline.right_6k  ?? '—'}</td>
+                  <td>${baseline.right_8k  ?? '—'}</td>
+                </tr>
+              ` : ''}
+              <tr class="ear-left" style="border-top: 1px solid var(--grey-200)">
+                <td class="q-ear-label">L</td>
+                <td>${test.left_500 ?? '—'}</td>
+                <td>${test.left_1k  ?? '—'}</td>
+                <td>${test.left_2k  ?? '—'}</td>
+                <td>${test.left_3k  ?? '—'}</td>
+                <td>${test.left_4k  ?? '—'}</td>
+                <td>${test.left_6k  ?? '—'}</td>
+                <td>${test.left_8k  ?? '—'}</td>
+              </tr>
+              ${baseline ? `
+                <tr class="ear-left baseline-row" style="opacity:0.6; font-size:13px">
+                  <td class="q-ear-label" style="font-size:10px">Base L</td>
+                  <td>${baseline.left_500 ?? '—'}</td>
+                  <td>${baseline.left_1k  ?? '—'}</td>
+                  <td>${baseline.left_2k  ?? '—'}</td>
+                  <td>${baseline.left_3k  ?? '—'}</td>
+                  <td>${baseline.left_4k  ?? '—'}</td>
+                  <td>${baseline.left_6k  ?? '—'}</td>
+                  <td>${baseline.left_8k  ?? '—'}</td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </div>
+
         ${hasDetail ? `
           <div class="result-detail-card">
             <div class="detail-row">

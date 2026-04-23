@@ -31,13 +31,50 @@ export const state = {
   logoUrl:            null,       // base64 data URL — loaded from IDB at boot
   packets:            [],         // all packets in IndexedDB
   currentPacket:      null,       // packet being worked on
-  currentEmployee:    null,       // employee being tested
-  currentThresholds:  {},         // threshold values from test entry — used by referral form
-  testData:           {},         // in-progress threshold values
-  classResult:        null,       // result from classify()
-  counselText:        '',         // editable counsel text
-  techNotes:          '',         // tech's internal notes
-  referralGivenToWorker: false,   // set by checkbox on counsel screen
+  
+  // Dual booth support
+  activeSlot:         0,          // 0 = Slot A, 1 = Slot B
+  slots: [
+    {
+      screen:             'dashboard',
+      currentPacket:      null,
+      currentEmployee:    null,
+      testData:           {},
+      hpdResult:          null,
+      classResult:        null,
+      counselText:        '',
+      techNotes:          '',
+      referralGivenToWorker: false,
+      questionnaire:      null,
+      currentThresholds:  {}
+    },
+    {
+      screen:             'dashboard',
+      currentPacket:      null,
+      currentEmployee:    null,
+      testData:           {},
+      hpdResult:          null,
+      classResult:        null,
+      counselText:        '',
+      techNotes:          '',
+      referralGivenToWorker: false,
+      questionnaire:      null,
+      currentThresholds:  {}
+    }
+  ],
+
+  // Convenience getters/setters for current slot (maintained by navigate/swaps)
+  // We'll map these legacy keys to the active slot during paint/navigate
+  currentEmployee:    null,
+  testData:           {},
+  hpdResult:          null,
+  classResult:        null,
+  counselText:        '',
+  techNotes:          '',
+  referralGivenToWorker: false,
+  questionnaire:      null,
+  currentThresholds:  {},
+
   lastSync:           null,       // ISO string of last sync
   helpReturnScreen:   null,       // screen to return to from help
 
@@ -100,6 +137,50 @@ function isNavActive(current, navScreen) {
 }
 
 // ---------------------------------------------------------------------------
+// Slot Management
+// ---------------------------------------------------------------------------
+
+function saveStateToSlot() {
+  const s = state.slots[state.activeSlot]
+  s.screen            = state.screen
+  s.currentPacket     = state.currentPacket
+  s.currentEmployee   = state.currentEmployee
+  s.testData          = state.testData
+  s.hpdResult         = state.hpdResult
+  s.classResult       = state.classResult
+  s.counselText       = state.counselText
+  s.techNotes         = state.techNotes
+  s.referralGivenToWorker = state.referralGivenToWorker
+  s.questionnaire     = state.questionnaire
+  s.currentThresholds = state.currentThresholds
+}
+
+function loadStateFromSlot() {
+  const s = state.slots[state.activeSlot]
+  state.screen            = s.screen
+  state.currentPacket     = s.currentPacket
+  state.currentEmployee   = s.currentEmployee
+  state.testData          = s.testData
+  state.hpdResult         = s.hpdResult
+  state.classResult       = s.classResult
+  state.counselText       = s.counselText
+  state.techNotes         = s.techNotes
+  state.referralGivenToWorker = s.referralGivenToWorker
+  state.questionnaire     = s.questionnaire
+  state.currentThresholds = s.currentThresholds
+}
+
+export function switchSlot(slotIndex) {
+  if (slotIndex < 0 || slotIndex > 1) return
+  if (state.activeSlot === slotIndex) return
+
+  saveStateToSlot()
+  state.activeSlot = slotIndex
+  loadStateFromSlot()
+  paint()
+}
+
+// ---------------------------------------------------------------------------
 // Navigation
 // ---------------------------------------------------------------------------
 
@@ -111,6 +192,10 @@ export function navigate(screen, params = {}) {
   if (screen === 'help') {
     state.helpReturnScreen = state.screen
   }
+  
+  // Before navigating, ensure current state is synced to the slot
+  saveStateToSlot()
+
   // Reset per-employee state when moving to a new employee
   if (screen === 'questionnaire-pre') {
     state.questionnaire          = null
@@ -119,9 +204,25 @@ export function navigate(screen, params = {}) {
     state.counselText            = ''
     state.techNotes              = ''
     state.classResult            = null
+    state.testData               = {}
+    state.hpdResult              = null
+    // We also need to clear whatever might be in the current slot
+    const s = state.slots[state.activeSlot]
+    s.questionnaire = null
+    s.currentThresholds = {}
+    s.referralGivenToWorker = false
+    s.counselText = ''
+    s.techNotes = ''
+    s.classResult = null
+    s.testData = {}
+    s.hpdResult = null
   }
   state.screen = screen
   Object.assign(state, params)
+
+  // After params are applied (like currentEmployee), save again to slot
+  saveStateToSlot()
+  
   paint()
 }
 
@@ -143,6 +244,12 @@ function paint() {
 
   const techName = state.user?.name ?? 'Tech'
 
+  const contextScreens = [
+    'company', 'employee-list', 'questionnaire-pre', 'questionnaire-post', 
+    'test-entry', 'classification', 'counsel', 'submit'
+  ]
+  const showSwitcher = contextScreens.includes(state.screen)
+
   app.innerHTML = `
     <div class="app-shell">
       <nav class="sidebar" id="sidebar">
@@ -152,6 +259,26 @@ function paint() {
             : `<div class="sidebar-logo-img">${BrandLogo}</div>`
           }
         </div>
+        
+        ${showSwitcher ? `
+          <div class="booth-switcher">
+            <button class="booth-btn ${state.activeSlot === 0 ? 'booth-btn--active' : ''}" data-slot="0">
+              <span class="booth-num">1</span>
+              <div class="booth-info">
+                <span class="booth-label">Booth 1</span>
+                <span class="booth-name">${state.slots[0].currentEmployee?.last_name ?? 'Empty'}</span>
+              </div>
+            </button>
+            <button class="booth-btn ${state.activeSlot === 1 ? 'booth-btn--active' : ''}" data-slot="1">
+              <span class="booth-num">2</span>
+              <div class="booth-info">
+                <span class="booth-label">Booth 2</span>
+                <span class="booth-name">${state.slots[1].currentEmployee?.last_name ?? 'Empty'}</span>
+              </div>
+            </button>
+          </div>
+        ` : ''}
+
         <ul class="sidebar-nav">
           ${NAV_ITEMS.map(item => `
             <li>
@@ -201,6 +328,12 @@ function paint() {
   })
 
   app.querySelector('#btn-new-visit')?.addEventListener('click', () => navigate('new-visit'))
+
+  app.querySelectorAll('.booth-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchSlot(Number(btn.dataset.slot))
+    })
+  })
 
   renderFn(document.getElementById('main-content'), state, navigate)
 }
