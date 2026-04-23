@@ -141,6 +141,10 @@ export function appendTestResult(packet, employeeId, testResult) {
   const emp = packet.employees.find(e => e.employee_id === employeeId)
   if (!emp) throw new Error(`Employee ${employeeId} not found in packet ${packet.packet_id}`)
 
+  // Hardened duplicate prevention: If we already have a test for this employee in this packet, 
+  // we replace it instead of appending. This prevents dual-click or re-test duplication.
+  emp.completed_tests = (emp.completed_tests ?? []).filter(t => t.test_date !== testResult.test_date)
+
   emp.completed_tests.push({
     test_date:                testResult.test_date,
     tech_id:                  testResult.tech_id,

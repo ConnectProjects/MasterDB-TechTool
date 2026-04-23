@@ -60,7 +60,12 @@ export function renderSubmit(container, state, navigate) {
   `
   container.querySelector('#btn-back').addEventListener('click',  () => navigate('counsel'))
   container.querySelector('#btn-back2').addEventListener('click', () => navigate('counsel'))
-  container.querySelector('#btn-confirm').addEventListener('click', () => doSave(container, state, navigate))
+  container.querySelector('#btn-confirm').addEventListener('click', () => {
+    const btn = container.querySelector('#btn-confirm')
+    if (btn.disabled) return
+    btn.disabled = true
+    doSave(container, state, navigate)
+  })
 }
 
 async function doSave(container, state, navigate) {
@@ -68,7 +73,6 @@ async function doSave(container, state, navigate) {
   const errorEl   = container.querySelector('#submit-error')
   const successEl = container.querySelector('#submit-success')
 
-  btn.disabled    = true
   btn.textContent = 'Saving…'
   errorEl.classList.add('hidden')
 
