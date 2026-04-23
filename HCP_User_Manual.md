@@ -370,6 +370,94 @@ The STS flag is set on any test classified as EW, EWC, A, or AC. For Alberta spe
 
 ---
 
+### TechTool: Field Operations Manual
+
+This section contains the complete operational guide for TechTool, the field component of the HCP platform.
+
+#### 1. Overview
+TechTool runs in a browser on the technician's device — phone, tablet, or laptop — and works fully offline once loaded. No internet connection is required on-site.
+
+**What TechTool does:**
+Guides you through a complete industrial audiometric testing visit. It loads your assigned employee list from a packet, walks you through threshold entry and classification for each employee, and bundles the completed results into a packet that gets submitted back to the office via the sync folder.
+
+**The two-app workflow:**
+1. **Office generates a packet** in MasterDB and saves it to the sync folder (OneDrive).
+2. **You sync TechTool** on your device to download the packet before you leave for site.
+3. **You test each employee** on-site, entering thresholds and reviewing classifications in TechTool.
+4. **You submit the completed packet** back to the sync folder when done.
+
+> **Note**: TechTool stores packets locally on your device using IndexedDB. Data persists between sessions but is tied to this browser on this device. Always submit completed packets promptly.
+
+#### 2. Getting Started
+**First launch — setting up your profile:**
+1. Enter your full name and initials. These are recorded on every test you conduct.
+2. Enter your **folder name** — the subfolder name within the sync folder where your packets are stored.
+3. Enter your **IAT number** — your Industrial Audiometric Technician certification number.
+4. Tap **Start**.
+
+**Connecting the sync folder:**
+1. From the Dashboard, tap **↓ Sync**.
+2. If no sync folder is connected, a folder picker will appear. Navigate to and select your OneDrive sync folder root.
+3. TechTool will look for packets in the `techs/[your folder name]` subfolder.
+
+> **Warning**: Folder access must be re-granted each browser session. If packets don't sync, try tapping Sync again.
+
+#### 3. Screens
+**Dashboard:**
+The home screen shows today's testing assignments and sync status.
+- **Today section**: Shows packets for today. Tap any card to open the company.
+- **Upcoming section**: Shows the next five packets scheduled for future dates.
+
+| Button | Action |
+| :--- | :--- |
+| ↓ Sync | Download new packets from the sync folder |
+| ☰ | Go to Schedule — full list of all packets |
+| ⚙ | Go to Settings |
+
+**Schedule:**
+Lists all packets on this device, organized by date.
+
+| Status | Meaning |
+| :--- | :--- |
+| Synced | Packet downloaded, not yet started |
+| In Progress | Some employees have been tested |
+| Complete | All employees resolved (tested or skipped) |
+| Submitted | Packet has been submitted back to the office |
+
+**Employee List:**
+Your main working screen during a visit.
+- **✓ Tested**: Test entry complete.
+- **Pending**: Not yet tested.
+- **Skipped**: Marked as not tested with a reason (Not present today, Left company, Declined to test).
+
+**Adding an employee on-site**: Tap **+ Add Employee**. These will be created in MasterDB on import.
+
+#### 4. Testing Workflow
+**Test Entry:**
+- **Baseline**: Reference audiogram.
+- **Periodic**: Comparison test.
+1. Tap frequency cell.
+2. Select value (0-100 dB, or NR).
+3. Check the live audiogram chart.
+
+**Classification:**
+Applied automatically based on provincial rules.
+- **Green**: Normal (N), Normal Change (NC)
+- **Yellow**: Early Warning (EW), Early Warning Change (EWC)
+- **Red**: Abnormal (A), Abnormal Change (AC)
+
+**Counsel:**
+Review and edit counsel text.
+- **Counsel text**: Editable text that goes to the employee and MasterDB.
+- **Referral forms**: For Abnormal or STS, complete paper forms. Tap **Print Referral Form** to generate a pre-filled PDF.
+
+**Finalize & Submit:**
+1. **Finalize**: Review the test record summary and tap **Confirm & Save**.
+2. **Submit Packet**: When all employees are resolved, tap **Submit Packet →**.
+3. **Connectivity**: You need internet/OneDrive access to submit.
+
+---
+
 ### Troubleshooting
 
 #### Legacy Import — "Could not find a recognisable header row"
