@@ -22,8 +22,9 @@ export function renderReports(container, state, navigate) {
 
       <div class="tab-bar">
         <button class="tab-btn ${tab === 'company'  ? 'tab-btn--active' : ''}" data-tab="company">Company Annual</button>
-        <button class="tab-btn ${tab === 'employee' ? 'tab-btn--active' : ''}" data-tab="employee">Employee History</button>
+        <button class="tab-btn ${tab === 'employee' ? 'tab-btn--active' : ''}" data-tab="employee">Worker History</button>
         <button class="tab-btn ${tab === 'sts'      ? 'tab-btn--active' : ''}" data-tab="sts">STS / Flagged</button>
+        <button class="tab-btn ${tab === 'audtech'  ? 'tab-btn--active' : ''}" data-tab="audtech">Aud-Tech Summary</button>
       </div>
 
       <div class="report-controls">
@@ -48,7 +49,7 @@ export function renderReports(container, state, navigate) {
               <select id="re-company"><option value="">— select —</option>${coOptions}</select>
             </div>
             <div class="form-group">
-              <label>Employee</label>
+              <label>Worker</label>
               <select id="re-employee"><option value="">— select company first —</option></select>
             </div>
             <button class="btn btn-primary btn-sm" id="btn-gen" style="align-self:flex-end;margin-bottom:1px">Generate</button>
@@ -69,6 +70,19 @@ export function renderReports(container, state, navigate) {
               <input id="rs-to" type="date" value="${today}" />
             </div>
             <button class="btn btn-primary btn-sm" id="btn-gen" style="align-self:flex-end;margin-bottom:1px">Generate</button>
+          </div>
+        ` : ''}
+        ${tab === 'audtech' ? `
+          <div class="inline-form">
+            <div class="form-group">
+              <label>From</label>
+              <input id="ra-from" type="date" value="${yrStart}" />
+            </div>
+            <div class="form-group">
+              <label>To</label>
+              <input id="ra-to" type="date" value="${today}" />
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-gen" style="align-self:flex-end;margin-bottom:1px">Generate Summary</button>
           </div>
         ` : ''}
       </div>
@@ -136,6 +150,16 @@ export function renderReports(container, state, navigate) {
       const to        = container.querySelector('#rs-to').value
       if (!companyId || !from || !to) { alert('Fill in all fields.'); return }
       showReport(buildStsReport(companyId, from, to))
+    })
+  }
+
+  // ---- Aud-Tech Summary ----
+  if (tab === 'audtech') {
+    container.querySelector('#btn-gen').addEventListener('click', () => {
+      const from = container.querySelector('#ra-from').value
+      const to   = container.querySelector('#ra-to').value
+      if (!from || !to) { alert('Select a date range.'); return }
+      showReport(buildAudTechReport(from, to))
     })
   }
 }
@@ -420,6 +444,111 @@ function buildStsReport(companyId, from, to) {
 
       <div class="report-footer">
         ${esc(co.name)} · Flagged Results ${from} to ${to}
+      </div>
+    </div>
+  `
+}
+
+// ---------------------------------------------------------------------------
+// Aud-Tech Summary Report
+// ---------------------------------------------------------------------------
+
+function buildAudTechReport(from, to) {
+  const rows = query(`
+    SELECT p.packet_id, p.visit_date, p.tech_id, p.testing_duration,
+           c.name AS company_name,
+           (SELECT COUNT(*) FROM tests WHERE packet_id = p.packet_id) AS test_count
+    FROM packets p
+    JOIN companies c ON c.company_id = p.company_id
+    WHERE p.visit_date BETWEEN ? AND ? AND p.status = 'imported'
+    ORDER BY p.visit_date DESC, p.tech_id
+  `, [from, to])
+
+  const techs = {}
+  rows.forEach(r => {
+    if (!techs[r.tech_id]) {
+      techs[r.tech_id] = { name: r.tech_id, totalTests: 0, totalDuration: 0, visits: [] }
+    }
+    const duration = parseFloat(r.testing_duration) || 0
+    techs[r.tech_id].totalTests += r.test_count
+    techs[r.tech_id].totalDuration += duration
+    techs[r.tech_id].visits.push(r)
+  })
+
+  const techSections = Object.values(techs).map(t => {
+    const visitRows = t.visits.map(v => `
+      <tr>
+        <td>${v.visit_date}</td>
+        <td class="td-primary">${esc(v.company_name)}</td>
+        <td style="text-align:center">${v.test_count}</td>
+        <td style="text-align:center">${v.testing_duration ?? '—'}</td>
+        <td class="td-muted" style="font-size:11px">${esc(v.packet_id)}</td>
+      </tr>
+    `).join('')
+
+    return `
+      <div class="report-tech-section" style="margin-bottom:32px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid var(--navy-mid); padding-bottom:6px; margin-bottom:12px">
+          <h2 style="margin:0; font-size:18px; color:var(--navy)">Tech: ${esc(t.name)}</h2>
+          <div style="font-size:13px; font-weight:600">
+            Total: ${t.totalTests} Tests &nbsp;·&nbsp; ${t.totalDuration.toFixed(1)} hrs
+          </div>
+        </div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th style="width:100px">Date</th>
+              <th>Company</th>
+              <th style="width:80px; text-align:center">Tests</th>
+              <th style="width:100px; text-align:center">Duration (h)</th>
+              <th style="width:140px">Packet ID</th>
+            </tr>
+          </thead>
+          <tbody>${visitRows}</tbody>
+        </table>
+      </div>
+    `
+  }).join('')
+
+  const genDate = new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+  const totalAllTests = rows.reduce((acc, r) => acc + r.test_count, 0)
+  const totalAllHours = rows.reduce((acc, r) => acc + (parseFloat(r.testing_duration) || 0), 0)
+
+  return `
+    <div class="report-print">
+      <div class="report-header">
+        <div>
+          <div class="report-brand">HCP-Web · MasterDB</div>
+          <h1 class="report-title">Aud-Tech Activity Summary</h1>
+          <div class="report-meta">Date Range: ${from} to ${to} &nbsp;·&nbsp; Generated ${genDate}</div>
+        </div>
+      </div>
+
+      <div class="report-stats-row">
+        <div class="report-stat">
+          <span class="stat-n">${Object.keys(techs).length}</span>
+          <span class="stat-lbl">Active Techs</span>
+        </div>
+        <div class="report-stat">
+          <span class="stat-n">${rows.length}</span>
+          <span class="stat-lbl">Total Visits</span>
+        </div>
+        <div class="report-stat">
+          <span class="stat-n">${totalAllTests}</span>
+          <span class="stat-lbl">Total Tests</span>
+        </div>
+        <div class="report-stat">
+          <span class="stat-n">${totalAllHours.toFixed(1)}</span>
+          <span class="stat-lbl">Total Hours</span>
+        </div>
+      </div>
+
+      ${rows.length === 0 
+        ? '<p style="color:#666; font-style:italic; padding:20px 0">No imported activity found in this date range.</p>'
+        : techSections}
+
+      <div class="report-footer">
+        Aud-Tech Activity Report · Range: ${from} to ${to}
       </div>
     </div>
   `

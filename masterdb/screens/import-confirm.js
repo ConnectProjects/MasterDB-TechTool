@@ -31,7 +31,8 @@ export function renderImportConfirm(container, state, navigate) {
     : []
 
   const employees      = packet.employees ?? []
-  const tested         = employees.filter(e => e.completed_tests?.length > 0)
+  const testedEmps     = employees.filter(e => e.completed_tests?.length > 0)
+  const totalTests     = testedEmps.reduce((acc, e) => acc + (e.completed_tests?.length ?? 0), 0)
   const alreadyImported = query(
     'SELECT COUNT(*) AS n FROM tests WHERE packet_id = ?', [packetId]
   )[0]?.n ?? 0
@@ -64,12 +65,13 @@ export function renderImportConfirm(container, state, navigate) {
               <span class="province-badge">${esc(packet.company?.province ?? '')}</span>
               <span>Visit: ${packet.visit?.visit_date ?? '—'}</span>
               <span>Tech: ${esc(packet.tech?.tech_id ?? '—')}</span>
+              <span>Duration: ${esc(packet.testing_duration ?? '—')} hrs</span>
               <span>Packet: ${esc(packet.packet_id)}</span>
               ${isOffline ? '<span class="badge badge-warn">📵 Offline Packet</span>' : ''}
             </div>
           </div>
           <div class="import-summary">
-            <span class="import-count">${tested.length} / ${employees.length} employees tested</span>
+            <span class="import-count">${testedEmps.length} / ${employees.length} employees tested</span>
           </div>
         </div>
 
@@ -124,7 +126,7 @@ export function renderImportConfirm(container, state, navigate) {
         ` : ''}
 
         <div class="import-results">
-          ${tested.map(emp => empResultCard(emp, packet.company?.province)).join('')}
+          ${testedEmps.map(emp => empResultCard(emp, packet.company?.province)).join('')}
           ${employees.filter(e => !e.completed_tests?.length).map(e => `
             <div class="import-emp-row import-emp-row--skipped">
               <span>${esc(e.last_name)}, ${esc(e.first_name)}</span>
@@ -142,8 +144,8 @@ export function renderImportConfirm(container, state, navigate) {
             ${canImport ? '' : 'disabled'}
             ${alreadyImported > 0 ? 'style="background:var(--red)"' : ''}>
             ${alreadyImported > 0
-              ? `Re-import ${tested.length} Test(s) — Creates Duplicates`
-              : `Import ${tested.length} Test(s) into MasterDB`}
+              ? `Re-import ${totalTests} Test(s) — Creates Duplicates`
+              : `Import ${totalTests} Test(s) into MasterDB`}
           </button>
         </div>
       </div>
@@ -319,6 +321,7 @@ async function doImport(container, packet, company, packetId, isOffline, navigat
     })
 
     updatePacketStatus(packetId, 'imported')
+    run('UPDATE packets SET testing_duration = ? WHERE packet_id = ?', [packet.testing_duration ?? null, packetId])
     run('DELETE FROM settings WHERE key = ?', [`pending_packet_${packetId}`])
     state._importCoId = null
 

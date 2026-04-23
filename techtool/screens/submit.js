@@ -92,10 +92,6 @@ async function doSave(container, state, navigate) {
     await savePacket(packet)
     await deleteDraft(packet.packet_id, emp.employee_id)
 
-    // Keep in-memory employee in sync
-    if (!Array.isArray(emp.completed_tests)) emp.completed_tests = []
-    emp.completed_tests.push(testRecord)
-
     btn.textContent = '✓ Saved'
     successEl.classList.remove('hidden')
 

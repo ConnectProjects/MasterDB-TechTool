@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS packets (
   visit_date    TEXT NOT NULL,
   filename      TEXT NOT NULL,
   status        TEXT NOT NULL DEFAULT 'pending',
+  testing_duration TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (company_id) REFERENCES companies(company_id)
@@ -183,6 +184,7 @@ export async function initSchema() {
   try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_to_employer INTEGER NOT NULL DEFAULT 0') } catch { /* exists */ }
   try { db.run('ALTER TABLE tests ADD COLUMN referral_sent_date TEXT') }                              catch { /* exists */ }
   try { db.run('ALTER TABLE tests ADD COLUMN questionnaire TEXT') }                                   catch { /* exists */ }
+  try { db.run('ALTER TABLE packets ADD COLUMN testing_duration TEXT') }                              catch { /* exists */ }
 
   // Note: org profile fields use the settings key/value table — no column migration needed
 

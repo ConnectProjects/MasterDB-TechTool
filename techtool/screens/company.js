@@ -51,7 +51,18 @@ export function renderCompany(container, state, navigate) {
         </div>
 
         ${allResolved ? `
-          <button class="btn btn-primary btn-block" id="btn-submit" style="margin-bottom:16px;background:var(--green);border-color:var(--green);">Submit Packet →</button>
+          <div class="form-group" style="margin: 16px 0 8px 0; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+            <label for="test-duration" style="font-weight:600; color:var(--text-dark);">Actual Testing Duration (hrs)</label>
+            <input type="text" id="test-duration" class="input-field" 
+              placeholder="e.g. 4.5" 
+              value="${esc(packet.testing_duration ?? '')}"
+              style="margin-top:4px; border: 1px solid #ccc;">
+            <div style="font-size:11px; color:#666; margin-top:4px;">* Required to submit packet</div>
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-submit" 
+            style="margin-bottom:16px;background:var(--green);border-color:var(--green);">
+            Submit Packet →
+          </button>
         ` : ''}
 
         <div class="employee-preview">
@@ -82,7 +93,26 @@ export function renderCompany(container, state, navigate) {
   container.querySelector('#btn-back').addEventListener('click', () => navigate('dashboard'))
   container.querySelector('#btn-start')?.addEventListener('click', () => navigate('employee-list'))
   container.querySelector('#btn-review')?.addEventListener('click', () => navigate('employee-list'))
-  container.querySelector('#btn-submit')?.addEventListener('click', () => navigate('sync'))
+  
+  const submitBtn = container.querySelector('#btn-submit')
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async () => {
+      const durationInput = container.querySelector('#test-duration')
+      const val = durationInput.value.trim()
+      
+      if (!val) {
+        alert('Please enter the total testing duration (e.g. 4.5) to submit this packet.')
+        durationInput.focus()
+        return
+      }
+
+      // Update packet with duration
+      packet.testing_duration = val
+      await import('../db/idb.js').then(m => m.savePacket(packet))
+      
+      navigate('sync')
+    })
+  }
 }
 
 function empPreviewRow(emp) {
