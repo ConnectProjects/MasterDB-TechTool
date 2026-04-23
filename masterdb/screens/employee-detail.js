@@ -322,13 +322,29 @@ function renderTestCard(test, baseline, emp, company, orgProfile) {
           <div class="test-counsel-label">Pre-Test Questionnaire</div>
           <div class="q-grid">
             <div class="q-item">
-              <span class="q-label">Noise < 2hrs:</span>
-              <span class="q-val">${questionnaire.pre.noise_2hrs ? `Yes (${questionnaire.pre.noise_duration})` : 'No'}</span>
+              <span class="q-label">Noise < 2h:</span>
+              <span class="q-val">${questionnaire.pre.noise_2h === true ? `Yes (${questionnaire.pre.noise_2h_duration})` : questionnaire.pre.noise_2h === false ? 'No' : '—'}</span>
             </div>
             <div class="q-item">
               <span class="q-label">Wears HPD:</span>
-              <span class="q-val">${questionnaire.pre.wear_hpd ? 'Yes' : 'No'}</span>
+              <span class="q-val">${questionnaire.pre.wear_hpd === true ? 'Yes' : questionnaire.pre.wear_hpd === false ? 'No' : '—'}</span>
             </div>
+            ${questionnaire.pre.wear_hpd === true ? `
+              <div class="q-item">
+                <span class="q-label">HPD Class:</span>
+                <span class="q-val">${esc(questionnaire.pre.hpd_class || '—')}</span>
+              </div>
+              <div class="q-item">
+                <span class="q-label">HPD Style:</span>
+                <span class="q-val">${esc(questionnaire.pre.hpd_style || '—')}</span>
+              </div>
+            ` : ''}
+            ${questionnaire.pre.wear_hpd === false && questionnaire.pre.hpd_no_reason ? `
+              <div class="q-item">
+                <span class="q-label">HPD No Reason:</span>
+                <span class="q-val">${esc(questionnaire.pre.hpd_no_reason)}</span>
+              </div>
+            ` : ''}
             <div class="q-item">
               <span class="q-label">Employer Info:</span>
               <span class="q-val">${questionnaire.pre.employer_info ? 'Yes' : 'No'}</span>

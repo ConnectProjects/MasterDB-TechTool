@@ -270,8 +270,14 @@ function buildEmployeeReport(employeeId) {
     
     const qLabels = []
     if (q?.pre) {
-      if (q.pre.noise_2hrs) qLabels.push(`Noise < 2h (${q.pre.noise_duration})`)
-      if (q.pre.wear_hpd) qLabels.push(`Wears HPD`)
+      if (q.pre.noise_2h === true) qLabels.push(`Noise < 2h (${q.pre.noise_2h_duration})`)
+      if (q.pre.wear_hpd === true) {
+        let details = q.pre.hpd_class || 'Yes'
+        if (q.pre.hpd_style) details += ` / ${q.pre.hpd_style}`
+        qLabels.push(`HPD: ${details}`)
+      } else if (q.pre.wear_hpd === false) {
+        qLabels.push(`No HPD (${q.pre.hpd_no_reason || 'No'})`)
+      }
       if (q.pre.employer_info) qLabels.push(`Emp Info`)
     }
     const qText = qLabels.length > 0 ? qLabels.join(', ') : '—'
