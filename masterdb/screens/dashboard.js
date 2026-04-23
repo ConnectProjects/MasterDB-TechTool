@@ -1,7 +1,8 @@
 import { getDashboardStats, getOverdueTests } from '../db/tests.js'
 import { getPacketsByStatus }                 from '../db/packets.js'
 import { isDemoLoaded, loadDemoData }         from '../db/demo.js'
-import { query }                              from '../db/sqlite.js'
+import { query, run, queryOne }               from '../db/sqlite.js'
+import { getSyncFolder, pickSyncFolder, listJsonFiles, readJsonFile, moveJsonFile } from '@shared/fs/sync-folder.js'
 
 export function renderDashboard(container, state, navigate) {
   const stats          = getDashboardStats()
@@ -159,7 +160,7 @@ export function renderDashboard(container, state, navigate) {
     tile.addEventListener('click', () => navigate(tile.dataset.action))
   })
 
-  container.querySelector('#btn-check-incoming')?.addEventListener('click', () => navigate('incoming'))
+  container.querySelector('#btn-check-incoming')?.addEventListener('click', () => checkSyncFolder(container, state, navigate))
   container.querySelector('#btn-load-demo')?.addEventListener('click', () => {
     loadDemoData()
     navigate('dashboard')
@@ -180,6 +181,97 @@ export function renderDashboard(container, state, navigate) {
       navigate('employee-detail', { currentEmployee: { employee_id: empId } })
     })
   })
+}
+
+async function checkSyncFolder(container, state, navigate) {
+  const btn = container.querySelector('#btn-check-incoming')
+  const head = btn.closest('.panel-head')
+
+  let status = container.querySelector('#sync-status')
+  if (!status) {
+    status = document.createElement('div')
+    status.id = 'sync-status'
+    status.style.fontSize = '12px'
+    status.style.marginTop = '4px'
+    status.style.padding = '4px 8px'
+    status.style.borderRadius = '4px'
+    head.after(status)
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Checking...'
+  status.className = 'alert alert-info'
+  status.style.display = 'block'
+  status.textContent = 'Scanning sync folder...'
+
+  try {
+    let folder = state.syncFolder
+    if (!folder) {
+      folder = await getSyncFolder()
+      if (!folder) folder = await pickSyncFolder()
+      state.syncFolder = folder
+    }
+
+    const files = await listJsonFiles(folder, 'inbox')
+
+    if (files.length === 0) {
+      status.textContent = 'No new packets found.'
+      status.className = 'alert alert-info'
+      setTimeout(() => { 
+        if (status) status.style.display = 'none'
+        btn.disabled = false
+        btn.textContent = 'Check Sync Folder'
+      }, 2000)
+      return
+    }
+
+    status.textContent = `Found ${files.length} packet(s), importing...`
+    let saved = 0
+
+    for (const { name } of files) {
+      try {
+        const packet = await readJsonFile(folder, 'inbox', name)
+        const coName = packet.company?.name ?? ''
+        const companyId = queryOne(
+          `SELECT company_id FROM companies WHERE name = ? LIMIT 1`, [coName]
+        )?.company_id ?? coName
+
+        run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+          [`pending_packet_${packet.packet_id}`, JSON.stringify(packet)]
+        )
+
+        run(`INSERT OR REPLACE INTO packets
+          (packet_id, company_id, tech_id, visit_date, filename, status, updated_at)
+          VALUES (?, ?, ?, ?, ?, 'submitted', datetime('now'))`,
+          [
+            packet.packet_id,
+            companyId,
+            packet.tech?.tech_id ?? null,
+            packet.visit?.visit_date ?? '',
+            name
+          ]
+        )
+
+        await moveJsonFile(folder, 'inbox', 'archive', name)
+        saved++
+      } catch (e) {
+        console.warn('Could not process packet:', name, e)
+      }
+    }
+
+    status.textContent = `✓ ${saved} packet(s) ready for review.`
+    status.className = 'alert alert-success'
+    
+    // Refresh the dashboard to show new packets
+    setTimeout(() => navigate('dashboard'), 1500)
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      status.textContent = `Failed: ${e.message}`
+      status.className = 'alert alert-error'
+      btn.disabled = false
+      btn.textContent = 'Check Sync Folder'
+    }
+  }
 }
 
 function esc(s) {
