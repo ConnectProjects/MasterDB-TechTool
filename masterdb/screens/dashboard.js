@@ -1,4 +1,4 @@
-import { getDashboardStats, getOverdueTests } from '../db/tests.js'
+import { getDashboardStats, getComingSoonCompanies } from '../db/tests.js'
 import { getPacketsByStatus }                 from '../db/packets.js'
 import { isDemoLoaded, loadDemoData }         from '../db/demo.js'
 import { query, run, queryOne }               from '../db/sqlite.js'
@@ -6,7 +6,7 @@ import { getSyncFolder, pickSyncFolder, listJsonFiles, readJsonFile, moveJsonFil
 
 export function renderDashboard(container, state, navigate) {
   const stats          = getDashboardStats()
-  const overdue        = getOverdueTests(24).slice(0, 8)
+  const comingSoon     = getComingSoonCompanies(6).slice(0, 8)
   const incoming       = getPacketsByStatus('submitted').slice(0, 5)
   const isEmpty        = stats.totalCompanies === 0 && !isDemoLoaded()
 
@@ -99,19 +99,19 @@ export function renderDashboard(container, state, navigate) {
           }
         </div>
 
-        <!-- Overdue tests -->
+        <!-- Coming Soon -->
         <div class="dash-panel">
           <div class="panel-head">
-            <h2>Overdue Tests <span class="panel-head-hint">(> 24 months)</span></h2>
+            <h2>Coming Soon <span class="panel-head-hint">(due within 6 months)</span></h2>
           </div>
-          ${overdue.length === 0
-            ? '<p class="empty-note">No overdue tests.</p>'
+          ${comingSoon.length === 0
+            ? '<p class="empty-note">No companies due soon.</p>'
             : `<div class="overdue-list">
-                ${overdue.map(e => `
-                  <div class="overdue-row">
+                ${comingSoon.map(c => `
+                  <div class="overdue-row company-link" data-company-id="${c.company_id}" style="cursor:pointer">
                     <div class="overdue-info">
-                      <div class="overdue-name">${esc(e.last_name)}, ${esc(e.first_name)}</div>
-                      <div class="overdue-meta">${esc(e.company_name)} · ${e.last_test_date ? 'Last: ' + e.last_test_date : 'Never tested'}</div>
+                      <div class="overdue-name">${esc(c.name)}</div>
+                      <div class="overdue-meta">${esc(c.province)} · ${c.last_test_date ? 'Last visit: ' + c.last_test_date : 'Never tested'} · ${c.active_emp_count} emp</div>
                     </div>
                   </div>
                 `).join('')}
@@ -171,6 +171,13 @@ export function renderDashboard(container, state, navigate) {
     btn.addEventListener('click', () => {
       const id = btn.dataset.packetId
       navigate('import-confirm', { params: { packetId: id } })
+    })
+  })
+
+  container.querySelectorAll('.company-link').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = Number(row.dataset.companyId)
+      navigate('company-detail', { currentCompany: { company_id: id } })
     })
   })
 

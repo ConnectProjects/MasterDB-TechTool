@@ -82,17 +82,27 @@ export function renderAudiogram({ current = {}, baseline = null, highlightFreqs 
   // Horizontal grid + dB labels
   for (let db = DB_MIN; db <= DB_MAX; db += DB_STEP) {
     const y      = yPos(db)
-    const isMark = db === 25   // normal-limit reference line
     svg.appendChild(el('line', {
       x1: MARGIN.left, y1: y, x2: MARGIN.left + CW, y2: y,
-      stroke: isMark ? '#aaa' : '#e5e5e5',
-      'stroke-width': isMark ? 1.5 : 1,
-      'stroke-dasharray': isMark ? '4,4' : ''
+      stroke: '#e5e5e5',
+      'stroke-width': 1
     }))
     svg.appendChild(txt(MARGIN.left - 5, y + 4, String(db), {
       'text-anchor': 'end', 'font-size': '11', fill: '#666', 'font-family': 'sans-serif'
     }))
   }
+
+  // 25dB reference line
+  const y25 = yPos(25)
+  svg.appendChild(el('line', {
+    x1: MARGIN.left, y1: y25, x2: MARGIN.left + CW, y2: y25,
+    stroke: '#999',
+    'stroke-width': 1.5,
+    'stroke-dasharray': '4,4'
+  }))
+  svg.appendChild(txt(MARGIN.left + CW + 5, y25 + 4, '25', {
+    'text-anchor': 'start', 'font-size': '10', fill: '#999', 'font-family': 'sans-serif', 'font-weight': 'bold'
+  }))
 
   // Y-axis label
   const yLabelEl = el('text', {

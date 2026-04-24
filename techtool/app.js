@@ -112,7 +112,7 @@ const SCREENS = {
 
 const NAV_ITEMS = [
   { screen: 'dashboard', label: 'Dashboard', icon: '⊞' },
-  { screen: 'schedule',  label: 'Schedule',  icon: '📅' },
+  { screen: 'schedule',  label: 'Packets',   icon: '📅' },
   { screen: 'calendar',  label: 'Calendar',  icon: '🗓' },
   { screen: 'settings',  label: 'Settings',  icon: '⚙'  },
   { screen: 'help',      label: 'Help',      icon: '?'  }

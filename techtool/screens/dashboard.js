@@ -5,7 +5,11 @@ import { syncLogoFromFolder } from './settings.js'
 
 export async function renderDashboard(container, state, navigate) {
   const today   = new Date().toISOString().slice(0, 10)
-  const packets = state.packets ?? []
+  const packets = (state.packets ?? []).filter(p => 
+    p.status !== PACKET_STATUS.SUBMITTED && 
+    p.status !== PACKET_STATUS.IMPORTED &&
+    p.status !== PACKET_STATUS.ARCHIVED
+  )
   const user    = state.user
 
   const todayPackets = packets.filter(p => p.visit?.visit_date === today)

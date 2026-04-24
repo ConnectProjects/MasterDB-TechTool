@@ -12,6 +12,7 @@ import { renderEmployees }    from './screens/employees.js'
 import { renderGeneratePacket}from './screens/generate-packet.js'
 import { renderPackets }      from './screens/packets.js'
 import { renderIncoming }     from './screens/incoming.js'
+import { renderRejectedPackets } from './screens/rejected-packets.js'
 import { renderImportConfirm }from './screens/import-confirm.js'
 import { renderSchedule }     from './screens/schedule.js'
 import { renderSettings }     from './screens/settings.js'
@@ -48,6 +49,7 @@ const SCREENS = {
   'generate-packet': renderGeneratePacket,
   packets:           renderPackets,
   incoming:          renderIncoming,
+  'rejected-packets': renderRejectedPackets,
   'import-confirm':  renderImportConfirm,
   schedule:          renderSchedule,
   settings:          renderSettings,
@@ -73,6 +75,7 @@ const NAV_PARENT = {
   'employee-detail': 'companies',
   'generate-packet': 'companies',
   'incoming':        'packets',
+  'rejected-packets': 'packets',
   'import-confirm':  'packets',
   'province-rules':  'settings'
 }

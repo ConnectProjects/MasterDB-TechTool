@@ -12,6 +12,7 @@ export function renderPackets(container, state, navigate) {
       <div class="page-header">
         <h1>Packets</h1>
         <div class="header-actions">
+          <button class="btn btn-outline btn-sm" id="btn-rejected">View Rejected</button>
           <button class="btn btn-outline btn-sm" id="btn-check-inbox">↙ Check Inbox</button>
           <button class="btn btn-primary"        id="btn-new-packet">+ New Packet</button>
         </div>
@@ -40,17 +41,6 @@ export function renderPackets(container, state, navigate) {
         </div>
       ` : ''}
 
-      <!-- Rejected -->
-      ${rejected.length > 0 ? `
-        <div class="packets-group">
-          <div class="packets-group-head">
-            <h2>Rejected <span class="packets-count packets-count--warn">${rejected.length}</span></h2>
-            <span class="section-desc-inline">Packets review but not imported.</span>
-          </div>
-          ${packetTable(rejected, true)}
-        </div>
-      ` : ''}
-
       <!-- Recent -->
       ${recent.length > 0 ? `
         <div class="packets-group">
@@ -70,6 +60,9 @@ export function renderPackets(container, state, navigate) {
     </div>
   `
 
+  container.querySelector('#btn-rejected').addEventListener('click', () =>
+    navigate('rejected-packets')
+  )
   container.querySelector('#btn-new-packet').addEventListener('click', () =>
     navigate('generate-packet')
   )

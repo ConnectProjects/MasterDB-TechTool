@@ -49,6 +49,25 @@ export function getOverdueTests(monthsThreshold = 24) {
   `, [cutoffStr])
 }
 
+export function getComingSoonCompanies(monthsThreshold = 6) {
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - monthsThreshold)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+  return query(`
+    SELECT c.company_id, c.name, c.province,
+           MAX(t.test_date) AS last_test_date,
+           COUNT(e.employee_id) AS active_emp_count
+    FROM companies c
+    LEFT JOIN employees e ON e.company_id = c.company_id AND e.status = 'active'
+    LEFT JOIN tests t ON t.employee_id = e.employee_id
+    WHERE c.active = 1
+    GROUP BY c.company_id
+    HAVING last_test_date IS NULL OR last_test_date < ?
+    ORDER BY last_test_date ASC
+  `, [cutoffStr])
+}
+
 export function createTest(data) {
   const classJson = data.classification ? JSON.stringify(data.classification) : null
   const qJson     = data.questionnaire    ? JSON.stringify(data.questionnaire)    : null

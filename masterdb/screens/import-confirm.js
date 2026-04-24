@@ -126,7 +126,7 @@ export function renderImportConfirm(container, state, navigate) {
         ` : ''}
 
         <div class="import-results">
-          ${testedEmps.map(emp => empResultCard(emp, packet.company?.province)).join('')}
+          ${testedEmps.map((emp, i) => empResultCard(emp, i, packet.company?.province)).join('')}
           ${employees.filter(e => !e.completed_tests?.length).map(e => `
             <div class="import-emp-row import-emp-row--skipped">
               <span>${esc(e.last_name)}, ${esc(e.first_name)}</span>
@@ -140,6 +140,7 @@ export function renderImportConfirm(container, state, navigate) {
 
         <div class="action-row">
           <button class="btn btn-ghost"   id="btn-cancel">Cancel</button>
+          <button class="btn btn-outline" id="btn-reject" style="color:var(--red); border-color:var(--red); margin-left:auto; margin-right:8px">Reject Packet</button>
           <button class="btn btn-primary" id="btn-import"
             ${canImport ? '' : 'disabled'}
             ${alreadyImported > 0 ? 'style="background:var(--red)"' : ''}>
@@ -158,6 +159,14 @@ export function renderImportConfirm(container, state, navigate) {
     container.querySelector('#btn-cancel').addEventListener('click', () => {
       state._importCoId = null
       navigate('incoming')
+    })
+    container.querySelector('#btn-reject').addEventListener('click', () => {
+      const note = prompt('Reason for rejection:')
+      if (note !== null) {
+        updatePacketStatus(packetId, 'rejected', note)
+        run('DELETE FROM settings WHERE key = ?', [`pending_packet_${packetId}`])
+        navigate('packets')
+      }
     })
 
     // Wire radio buttons for company match
@@ -182,25 +191,79 @@ export function renderImportConfirm(container, state, navigate) {
   }
 }
 
-function empResultCard(emp, province) {
-  return emp.completed_tests.map(test => {
+function empResultCard(emp, empIndex, province) {
+  return emp.completed_tests.map((test, testIndex) => {
     const cls  = test.classification ?? null
     const cat  = cls?.category ?? '?'
     const hpd  = test.hpd_assessment
     const clsM = { N: 'n', EW: 'ew', A: 'a', NC: 'nc', EWC: 'ewc', AC: 'ac' }
     const clsL = { N: 'Normal', EW: 'Early Warning', A: 'Abnormal', NC: 'No Change', EWC: 'EW Change', AC: 'Abn Change' }
+    const q    = test.questionnaire 
+    
+    // Thresholds table
+    const FREQS = ['500', '1k', '2k', '3k', '4k', '6k', '8k']
+    const tBody = `
+      <table class="threshold-table" style="font-size:11px; margin-top:8px">
+        <thead><tr><th></th>${FREQS.map(f => `<th>${f.toUpperCase()}</th>`).join('')}</tr></thead>
+        <tbody>
+          <tr><td>R</td>${FREQS.map(f => `<td>${test.thresholds?.['right_'+f] ?? '—'}</td>`).join('')}</tr>
+          <tr><td>L</td>${FREQS.map(f => `<td>${test.thresholds?.['left_'+f] ?? '—'}</td>`).join('')}</tr>
+        </tbody>
+      </table>
+    `
+
     return `
-      <div class="import-emp-row">
-        <div class="import-emp-info">
-          <strong>${esc(emp.last_name)}, ${esc(emp.first_name)}</strong>
-          <span class="td-muted">${test.test_type ?? 'Periodic'} · ${test.test_date}</span>
+      <details class="import-details" style="border-bottom:1px solid var(--grey-200)">
+        <summary class="import-emp-row" style="cursor:pointer; display:flex; align-items:center; list-style:none">
+          <div class="import-emp-info" style="flex:1">
+            <strong>${esc(emp.last_name)}, ${esc(emp.first_name)}</strong>
+            <span class="td-muted" style="margin-left:8px">${test.test_type ?? 'Periodic'} · ${test.test_date}</span>
+          </div>
+          <div class="import-emp-result">
+            <span class="class-badge class-${clsM[cat] ?? ''}">${clsL[cat] ?? cat}</span>
+            ${hpd?.valid ? `<span class="class-badge class-${hpd.adequacy?.toLowerCase()}">${hpd.adequacy}</span>` : ''}
+          </div>
+          <span class="chevron" style="margin-left:12px; color:var(--grey-400)">▼</span>
+        </summary>
+        <div class="import-details-content" style="padding:0 16px 16px 16px; background:var(--grey-50); font-size:13px">
+          ${tBody}
+          
+          ${q?.pre ? `
+            <div style="margin-top:12px; border-top:1px solid var(--grey-200); padding-top:8px">
+              <div style="font-weight:600; font-size:11px; color:var(--grey-600); text-transform:uppercase; margin-bottom:4px">Questionnaire</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px">
+                <span>Noise < 2h: <strong>${q.pre.noise_2h ? 'Yes ('+q.pre.noise_2h_duration+')' : 'No'}</strong></span>
+                <span>Wears HPD: <strong>${q.pre.wear_hpd ? 'Yes' : 'No'}</strong></span>
+                ${q.pre.wear_hpd ? `
+                  <span>Style: <strong>${esc(q.pre.hpd_style)}</strong></span>
+                  <span>Class: <strong>${esc(q.pre.hpd_class)}</strong></span>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          ${test.counsel_text ? `
+            <div style="margin-top:12px; border-top:1px solid var(--grey-200); padding-top:8px">
+              <div style="font-weight:600; font-size:11px; color:var(--grey-600); text-transform:uppercase; margin-bottom:4px">Counseling</div>
+              <div style="color:var(--grey-800)">${esc(test.counsel_text)}</div>
+            </div>
+          ` : ''}
+
+          ${test.tech_notes ? `
+            <div style="margin-top:12px; border-top:1px solid var(--grey-200); padding-top:8px">
+              <div style="font-weight:600; font-size:11px; color:var(--grey-600); text-transform:uppercase; margin-bottom:4px">Tech Notes</div>
+              <div style="color:var(--grey-600); font-style:italic">${esc(test.tech_notes)}</div>
+            </div>
+          ` : ''}
+
+          ${hpd?.valid ? `
+            <div style="margin-top:12px; border-top:1px solid var(--grey-200); padding-top:8px">
+              <div style="font-weight:600; font-size:11px; color:var(--grey-600); text-transform:uppercase; margin-bottom:4px">HPD Assessment</div>
+              <div>${esc(hpd.hpd_make_model)} · NRR: ${hpd.rated_nrr}dB · LEX: ${hpd.lex8hr}dB(A) · <strong>${hpd.adequacy}</strong></div>
+            </div>
+          ` : ''}
         </div>
-        <div class="import-emp-result">
-          <span class="class-badge class-${clsM[cat] ?? ''}">${clsL[cat] ?? cat}</span>
-          ${hpd?.valid ? `<span class="class-badge class-${hpd.adequacy?.toLowerCase()}">${hpd.adequacy}</span>` : ''}
-        </div>
-        ${test.counsel_text ? `<div class="import-counsel">${esc(test.counsel_text.slice(0, 120))}${test.counsel_text.length > 120 ? '…' : ''}</div>` : ''}
-      </div>
+      </details>
     `
   }).join('')
 }

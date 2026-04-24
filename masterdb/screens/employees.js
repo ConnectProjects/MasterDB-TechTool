@@ -16,20 +16,43 @@ export function renderEmployees(container, state, navigate) {
 
   let currentFilter = filter
   let currentSearch = ''
+  let sortCol      = 'last_name'
+  let sortDir      = 1 // 1 asc, -1 desc
 
   function getDisplayed() {
-    const base = currentSearch.length >= 2
+    let base = currentSearch.length >= 2
       ? searchEmployees(currentSearch)
       : query(ALL_EMPLOYEES_SQL)
-    if (!currentFilter) return base
-    return base.filter(e => {
-      const cat = parseClassification(e.last_classification)?.category
-      // EW filter matches EW and EWC; A filter matches A and AC; N matches N and NC
-      if (currentFilter === 'EW') return cat === 'EW' || cat === 'EWC'
-      if (currentFilter === 'A')  return cat === 'A'  || cat === 'AC'
-      if (currentFilter === 'N')  return cat === 'N'  || cat === 'NC'
-      return cat === currentFilter
+    
+    if (currentFilter) {
+      base = base.filter(e => {
+        const cat = parseClassification(e.last_classification)?.category
+        if (currentFilter === 'EW') return cat === 'EW' || cat === 'EWC'
+        if (currentFilter === 'A')  return cat === 'A'  || cat === 'AC'
+        if (currentFilter === 'N')  return cat === 'N'  || cat === 'NC'
+        return cat === currentFilter
+      })
+    }
+
+    base.sort((a, b) => {
+      let va = a[sortCol] ?? ''
+      let vb = b[sortCol] ?? ''
+      
+      // Special handling for full name if requested, but use columns for now
+      if (sortCol === 'name') {
+        va = `${a.last_name}, ${a.first_name}`.toLowerCase()
+        vb = `${b.last_name}, ${b.first_name}`.toLowerCase()
+      } else {
+        if (typeof va === 'string') va = va.toLowerCase()
+        if (typeof vb === 'string') vb = vb.toLowerCase()
+      }
+
+      if (va < vb) return -1 * sortDir
+      if (va > vb) return 1 * sortDir
+      return 0
     })
+
+    return base
   }
 
   function refresh() {
@@ -63,10 +86,13 @@ export function renderEmployees(container, state, navigate) {
       </div>
 
       <table class="data-table">
-        <thead>
+        <thead id="emp-thead">
           <tr>
-            <th>Name</th><th>Company</th><th>Province</th>
-            <th>Last Test</th><th>Classification</th>
+            <th data-col="name" class="sortable">Name ${sortCol === 'name' ? (sortDir === 1 ? '↑' : '↓') : ''}</th>
+            <th data-col="company_name" class="sortable">Company ${sortCol === 'company_name' ? (sortDir === 1 ? '↑' : '↓') : ''}</th>
+            <th data-col="province" class="sortable">Province ${sortCol === 'province' ? (sortDir === 1 ? '↑' : '↓') : ''}</th>
+            <th data-col="last_test_date" class="sortable">Last Test ${sortCol === 'last_test_date' ? (sortDir === 1 ? '↑' : '↓') : ''}</th>
+            <th>Classification</th>
           </tr>
         </thead>
         <tbody id="emp-tbody">
@@ -75,6 +101,25 @@ export function renderEmployees(container, state, navigate) {
       </table>
     </div>
   `
+
+  container.querySelector('#emp-thead').addEventListener('click', e => {
+    const th = e.target.closest('th[data-col]')
+    if (!th) return
+    const col = th.dataset.col
+    if (sortCol === col) {
+      sortDir *= -1
+    } else {
+      sortCol = col
+      sortDir = 1
+    }
+    // Update headers
+    container.querySelectorAll('th[data-col]').forEach(t => {
+      const c = t.dataset.col
+      const label = c === 'name' ? 'Name' : c === 'company_name' ? 'Company' : c === 'province' ? 'Province' : 'Last Test'
+      t.textContent = `${label} ${sortCol === c ? (sortDir === 1 ? '↑' : '↓') : ''}`
+    })
+    refresh()
+  })
 
   container.querySelector('#filter-cat').addEventListener('change', e => {
     currentFilter = e.target.value

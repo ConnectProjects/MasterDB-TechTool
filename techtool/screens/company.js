@@ -53,15 +53,17 @@ export function renderCompany(container, state, navigate) {
         ${done > 0 || skipped > 0 ? `
           <div class="form-group visit-duration-box">
             <label for="test-duration">Actual Testing Duration (hrs)</label>
-            <input type="text" id="test-duration" class="input-field" 
+            <input type="number" id="test-duration" class="input-field" 
               placeholder="e.g. 4.5" 
+              step="0.25"
+              min="0"
               value="${esc(packet.testing_duration ?? '')}">
             <div class="field-help">* Total time spent testing today (required for submission)</div>
           </div>
         ` : ''}
 
         ${allResolved ? `
-          <button class="btn btn-primary btn-block" id="btn-submit">
+          <button class="btn btn-primary btn-block" id="btn-submit" ${!packet.testing_duration ? 'disabled' : ''}>
             Submit Packet →
           </button>
         ` : ''}
@@ -96,14 +98,23 @@ export function renderCompany(container, state, navigate) {
   container.querySelector('#btn-review')?.addEventListener('click', () => navigate('employee-list'))
   
   const submitBtn = container.querySelector('#btn-submit')
+  const durationInput = container.querySelector('#test-duration')
+
+  if (durationInput && submitBtn) {
+    durationInput.addEventListener('input', () => {
+      const val = durationInput.value.trim()
+      packet.testing_duration = val
+      submitBtn.disabled = !val || isNaN(parseFloat(val))
+    })
+  }
+
   if (submitBtn) {
     submitBtn.addEventListener('click', async () => {
-      const durationInput = container.querySelector('#test-duration')
-      const val = durationInput.value.trim()
+      const val = durationInput?.value?.trim()
       
       if (!val) {
         alert('Please enter the total testing duration (e.g. 4.5) to submit this packet.')
-        durationInput.focus()
+        durationInput?.focus()
         return
       }
 
