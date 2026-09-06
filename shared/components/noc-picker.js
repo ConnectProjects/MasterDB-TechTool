@@ -17,17 +17,23 @@
  * The NOC JSON is loaded once and cached for the lifetime of the page.
  */
 
-const NOC_PATH = new URL('../../shared/wsbc-noc.json', import.meta.url).href
+// Resolve relative to the app's HTML document (always masterdb2/index.html)
+// so the path works regardless of which screen imported this module.
+const NOC_PATH = new URL('../shared/wsbc-noc.json', document.baseURI).href
 
-let _nocData   = null   // cached [code, title][] once loaded
-let _loadProm  = null   // in-flight promise so concurrent callers share one fetch
+let _nocData  = null   // cached [code, title][] once loaded
+let _loadProm = null   // in-flight fetch promise; cleared on error so retries work
 
 async function loadNoc() {
   if (_nocData) return _nocData
   if (_loadProm) return _loadProm
   _loadProm = fetch(NOC_PATH)
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status} fetching NOC list`)
+      return r.json()
+    })
     .then(data => { _nocData = data; return data })
+    .catch(err => { _loadProm = null; throw err })  // allow retry on next keystroke
   return _loadProm
 }
 
@@ -116,14 +122,26 @@ export function mountNocPicker(containerEl, { jobTitle = '', occupationCode = ''
 
   async function search(q) {
     if (!q.trim()) { close(); return }
-    const data = await loadNoc()
-    const ql   = q.toLowerCase()
-    const hits  = []
+    let data
+    try {
+      data = await loadNoc()
+    } catch {
+      list.innerHTML = `<li style="padding:0.4rem 0.6rem;font-size:0.8125rem;color:var(--clr-error-text,#b91c1c)">Unable to load occupation list</li>`
+      list.style.display = ''
+      return
+    }
+    const ql  = q.toLowerCase()
+    const hits = []
     for (const entry of data) {
       if (entry[1].toLowerCase().includes(ql)) {
         hits.push(entry)
         if (hits.length >= MAX_RESULTS) break
       }
+    }
+    if (!hits.length) {
+      list.innerHTML = `<li style="padding:0.4rem 0.6rem;font-size:0.8125rem;color:var(--clr-subtle)">No results for "${_esc(q)}"</li>`
+      list.style.display = ''
+      return
     }
     renderList(hits)
   }
