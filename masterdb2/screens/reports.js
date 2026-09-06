@@ -6,7 +6,7 @@
  */
 
 import { query } from '../db/db.js'
-import { generateWsbcCsv } from '../db/wsbc-export.js'
+import { generateWsbcCsv, validateWsbcExport } from '../db/wsbc-export.js'
 
 export function mount(container) {
   const today       = new Date()
@@ -235,6 +235,7 @@ export function mount(container) {
           ${hasBcLocation ? `<button class="btn btn-secondary" id="r-wsbc-csv" title="Generate WorkSafeBC File_Upload_Template CSV">Export for WSBC</button>` : ''}
         </div>
       </div>
+      <div id="r-wsbc-validation"></div>
       ${blocksHTML}
     `
 
@@ -288,18 +289,10 @@ export function mount(container) {
 
     if (hasBcLocation) {
       output.querySelector('#r-wsbc-csv')?.addEventListener('click', () => {
-        // Export BC tests from the selected location(s) in the date range
-        const errEl = output.querySelector('#r-wsbc-err') ?? (() => {
-          const el = document.createElement('span')
-          el.id = 'r-wsbc-err'
-          el.style.cssText = 'color:var(--clr-error-text);font-size:0.875rem;margin-left:0.5rem'
-          output.querySelector('#r-wsbc-csv').after(el)
-          return el
-        })()
-        errEl.textContent = ''
+        const validEl = output.querySelector('#r-wsbc-validation')
+        validEl.innerHTML = ''
 
         try {
-          // Gather all BC test IDs from the current query
           const sql3 = `
             SELECT te.test_id FROM tests te
             JOIN  locations l ON l.location_id = te.location_id
@@ -310,11 +303,21 @@ export function mount(container) {
               ${locationClause(locationIds)}
             ORDER BY te.test_date`
           const p3 = [from, to,
-            ...(companyId   ? [Number(companyId)] : []),
+            ...(companyId ? [Number(companyId)] : []),
             ...locationIds
           ]
           const ids = query(sql3, p3).map(r => r.test_id)
-          if (!ids.length) { errEl.textContent = 'No BC tests in selection.'; return }
+          if (!ids.length) {
+            validEl.innerHTML = `<div class="warning-banner" style="margin-bottom:1rem">No BC tests in the selected date range and location filter.</div>`
+            return
+          }
+
+          const { valid, groups, totalCount } = validateWsbcExport(ids)
+          if (!valid) {
+            validEl.innerHTML = renderWsbcValidationErrors(groups, totalCount)
+            validEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            return
+          }
 
           const { csv, filename } = generateWsbcCsv(ids)
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -323,7 +326,8 @@ export function mount(container) {
           document.body.appendChild(a); a.click(); document.body.removeChild(a)
           URL.revokeObjectURL(url)
         } catch (e) {
-          errEl.textContent = e.message
+          output.querySelector('#r-wsbc-validation').innerHTML =
+            `<div class="error-banner" style="margin-bottom:1rem"><strong>Export failed:</strong> ${esc(e.message)}</div>`
         }
       })
     }
@@ -353,5 +357,61 @@ function esc(s) {
 function fmtDate(d) {
   if (!d) return ''
   try { return new Date(d + 'T00:00:00').toLocaleDateString('en-CA') } catch { return d }
+}
+
+function renderWsbcValidationErrors(groups, totalCount) {
+  const sectionStyle = 'margin-bottom:0.9rem'
+  const labelStyle   = 'font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#8b1a1a;margin:0 0 0.3rem'
+  const listStyle    = 'margin:0;padding-left:1.25rem;font-size:0.85rem;line-height:1.6'
+
+  const sections = []
+
+  if (groups.company.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Company setup (${groups.company.length})</p>
+        <ul style="${listStyle}">${groups.company.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.location.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Location setup (${groups.location.length})</p>
+        <ul style="${listStyle}">${groups.location.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.worker.length) {
+    const totalFields = groups.worker.reduce((n, w) => n + w.fields.length, 0)
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Worker records — ${totalFields} missing field${totalFields !== 1 ? 's' : ''} across ${groups.worker.length} worker${groups.worker.length !== 1 ? 's' : ''}</p>
+        <ul style="${listStyle}">${groups.worker.map(w =>
+          `<li><strong>${esc(w.name)}</strong> — missing: ${w.fields.map(esc).join(', ')}</li>`
+        ).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.test.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Questionnaire / test data (${groups.test.length} issue${groups.test.length !== 1 ? 's' : ''})</p>
+        <ul style="${listStyle}">${groups.test.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  return `
+    <div style="margin-bottom:1.25rem;padding:1rem 1.25rem;border-radius:var(--radius);
+                border-left:4px solid #c0392b;background:#fff8f7;
+                border:1px solid #f5c6c6;border-left:4px solid #c0392b">
+      <p style="font-weight:700;color:#c0392b;margin:0 0 0.75rem;font-size:0.95rem">
+        Export blocked &mdash; ${totalCount} issue${totalCount !== 1 ? 's' : ''} must be corrected before generating the WSBC file
+      </p>
+      ${sections.join('')}
+      <p style="font-size:0.8rem;color:var(--clr-subtle);margin:0.5rem 0 0">
+        Correct the above in company, location, or worker settings, then click <strong>Export for WSBC</strong> again.
+      </p>
+    </div>`
 }
 

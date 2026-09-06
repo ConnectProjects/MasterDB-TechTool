@@ -111,6 +111,125 @@ function noiseHours(noise_2h, noise_2h_duration) {
 }
 
 /**
+ * Validate that all required WSBC fields are present for the given test IDs.
+ *
+ * Returns { valid: bool, groups: { company, location, worker, test }, totalCount }
+ *   company  — array of strings (one entry per affected company)
+ *   location — array of strings (one entry per affected location)
+ *   worker   — array of { name, fields: string[] } (grouped per person)
+ *   test     — array of strings (one per test/questionnaire issue)
+ *   totalCount — total number of individual issues
+ */
+export function validateWsbcExport(testIds) {
+  if (!testIds?.length) {
+    return { valid: false, groups: { company: ['No tests selected.'], location: [], worker: [], test: [] }, totalCount: 1 }
+  }
+
+  const placeholders = testIds.map(() => '?').join(',')
+  const rows = query(`
+    SELECT
+      te.test_id, te.test_date, te.questionnaire,
+      e.first_name, e.last_name, e.dob, e.gender,
+      e.wsbc_worker_id, e.occupation_code,
+      c.name AS employer_name, c.worksafebc_employer_id,
+      l.name AS location_number, l.cu_code,
+      COALESCE(te.tech_iat, tk.iat_number, tkn.iat_number) AS wsbc_tech_id
+    FROM tests te
+    JOIN employees e  ON e.employee_id    = te.employee_id
+    JOIN locations l  ON l.location_id    = te.location_id
+    JOIN companies c  ON c.company_id     = l.company_id
+    LEFT JOIN techs tk  ON tk.tech_id     = te.tech_id
+    LEFT JOIN users u   ON u.user_id      = te.tech_id
+    LEFT JOIN techs tkn ON tk.tech_id IS NULL
+                       AND LOWER(tkn.name) = LOWER(u.name)
+                       AND tkn.active = 1
+    WHERE te.test_id IN (${placeholders}) AND te.deleted_at IS NULL
+  `, testIds)
+
+  const companyIssues  = new Set()
+  const locationIssues = new Set()
+  const workerIssues   = new Map()   // personKey → { name, fields: Set }
+  const testIssues     = []
+
+  function addWorkerIssue(row, field) {
+    const key = String(row.wsbc_worker_id ?? `${row.last_name}|${row.first_name}`)
+    if (!workerIssues.has(key)) {
+      workerIssues.set(key, { name: `${row.last_name}, ${row.first_name}`, fields: new Set() })
+    }
+    workerIssues.get(key).fields.add(field)
+  }
+
+  for (const row of rows) {
+    const name    = `${row.last_name}, ${row.first_name}`
+    const dateLbl = `${name} (${row.test_date ?? '?'})`
+
+    // Company-level
+    if (!row.worksafebc_employer_id) {
+      companyIssues.add(`"${row.employer_name}" — WorkSafeBC Employer ID not set (edit company settings)`)
+    }
+
+    // Location-level
+    if (!row.cu_code) {
+      locationIssues.add(`"${row.location_number}" — CU Code not set (edit location settings)`)
+    }
+
+    // Worker-level (deduplicated per person)
+    if (!row.wsbc_worker_id)  addWorkerIssue(row, 'Worker ID (WSBC)')
+    if (!row.dob)             addWorkerIssue(row, 'Date of birth')
+    if (!row.gender)          addWorkerIssue(row, 'Gender')
+    if (!row.occupation_code) addWorkerIssue(row, 'Occupation code')
+
+    // Test / questionnaire
+    let q = {}
+    try { if (row.questionnaire) q = JSON.parse(row.questionnaire) } catch {}
+
+    if (!row.wsbc_tech_id) {
+      testIssues.push(`${dateLbl} — Technician ID not found; verify the technician has an IAT number in their profile`)
+    }
+    if (q.noise_2h == null && q.exposed_noise_last_hours == null) {
+      testIssues.push(`${dateLbl} — Noise exposure question not answered (ExposedToNoiseInLastHours)`)
+    }
+    if (q.wear_hpd == null && q.regularly_wear_hpd == null) {
+      testIssues.push(`${dateLbl} — HPD usage question not answered (RegularlyWearHearingProt)`)
+    }
+    // WhyNotWear is required only when the worker does not wear HPD
+    const wearVal   = q.wear_hpd ?? q.regularly_wear_hpd
+    const notWearing = wearVal != null && (
+      wearVal === false ||
+      String(wearVal).toLowerCase() === 'false' ||
+      String(wearVal).toLowerCase() === 'no'
+    )
+    if (notWearing && !q.hpd_no_reason && !q.why_not_wear_hpd) {
+      testIssues.push(`${dateLbl} — Worker does not wear HPD but no reason was recorded (WhyNotWearHearingProtReg)`)
+    }
+    if (q.employer_info == null) {
+      testIssues.push(`${dateLbl} — Noise education question not answered (HaveReceivedEducation)`)
+    }
+    if (q.childhood_loss == null && q.childhood_hearing_loss == null) {
+      testIssues.push(`${dateLbl} — Childhood hearing loss question not answered (HadHearingLossInChildhood)`)
+    }
+    if (!q.years_in_occupation) {
+      testIssues.push(`${dateLbl} — Years in occupation not recorded`)
+    }
+  }
+
+  const workerList = [...workerIssues.values()].map(w => ({ name: w.name, fields: [...w.fields] }))
+
+  const groups = {
+    company:  [...companyIssues],
+    location: [...locationIssues],
+    worker:   workerList,
+    test:     testIssues,
+  }
+
+  const totalCount = groups.company.length + groups.location.length +
+                     groups.worker.reduce((n, w) => n + w.fields.length, 0) +
+                     groups.test.length
+
+  return { valid: totalCount === 0, groups, totalCount }
+}
+
+/**
  * Generate WSBC CSV for a set of test IDs.
  *
  * testIds: array of test_id integers
