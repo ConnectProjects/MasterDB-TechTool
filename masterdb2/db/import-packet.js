@@ -229,8 +229,7 @@ export function previewImport(packet) {
         isDup   = isDuplicateTest(match.employee.employee_id, test, techId)
         wouldBl = !isDup && !getActiveBaseline(match.employee.employee_id)
       } else if (match.type === 'new') {
-        // New person has no prior tests — first completed test will become baseline
-        wouldBl = !isDup && completedTests?.filter(t => !t?.isEmpty).indexOf(test) === 0  // only first
+        wouldBl = false  // corrected by the fixup loop below once completedTests is fully built
       }
 
       if (!isDup && match.employee && !match.needsConfirmation) toImport++
