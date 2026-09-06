@@ -98,6 +98,18 @@ function yesNo(v) {
   return String(v)
 }
 
+// WSBC ExposedToNoiseInLastHours expects a number.
+// TechTool captures noise_2h (Yes/No) + noise_2h_duration (text range).
+function noiseHours(noise_2h, noise_2h_duration) {
+  if (!noise_2h || noise_2h === false || String(noise_2h).toLowerCase() === 'false'
+      || String(noise_2h).toLowerCase() === 'no') return '0'
+  const dur = String(noise_2h_duration ?? '').toLowerCase()
+  if (dur.includes('less') || dur.startsWith('<')) return '1'
+  if (dur.includes('2-4') || dur.includes('2–4')) return '3'
+  if (dur.includes('over') || dur.startsWith('>')) return '6'
+  return '2'  // exposed but duration not specified
+}
+
 /**
  * Generate WSBC CSV for a set of test IDs.
  *
@@ -159,7 +171,7 @@ export function generateWsbcCsv(testIds) {
       isoToWsbc(row.dob),
       '',                              // Gender
       row.sin_last_4  ?? '',
-      '',                              // Years in Occupation
+      q.years_in_occupation            ?? '',
       row.worksafebc_employer_id ?? '',
       row.employer_name ?? '',
       operatingLocation,
@@ -182,18 +194,18 @@ export function generateWsbcCsv(testIds) {
       dbThreshold(row, 'right_4k'),
       dbThreshold(row, 'right_6k'),
       dbThreshold(row, 'right_8k'),
-      yesNo(q.exposed_noise_last_hours),
-      q.hours_noise_exposure           ?? '',
-      yesNo(q.regularly_wear_hpd),
+      noiseHours(q.noise_2h, q.noise_2h_duration),
+      q.noise_2h_duration              ?? '',
+      yesNo(q.wear_hpd),
       q.hpd_class                      ?? '',
       q.hpd_style                      ?? '',
-      q.why_not_wear_hpd               ?? '',
-      '',                              // HaveReceivedEducation (not captured in TechTool)
+      q.hpd_no_reason                  ?? '',
+      yesNo(q.employer_info),
       yesNo(q.ear_infection),
       yesNo(q.ear_surgery),
       yesNo(q.dizziness),
       yesNo(q.head_injury),
-      yesNo(q.childhood_hearing_loss),
+      yesNo(q.childhood_loss),
       yesNo(q.tinnitus),
       q.tinnitus_ear                   ?? '',
       '',                              // WhenFirstNoticed
