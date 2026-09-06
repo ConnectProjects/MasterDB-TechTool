@@ -39,7 +39,7 @@ const TEST_COLS = [
   ...THR,
   'classification','triggered_rule_id','sts_flag','counsel_text','tech_notes',
   'questionnaire','packet_id','referral_given_to_worker',
-  'triggering_freq_hz','triggering_ear','shift_db'
+  'triggering_freq_hz','triggering_ear','shift_db','tech_iat'
 ]
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -218,26 +218,25 @@ export function previewImport(packet) {
     if (match.type === 'new') newPersons++
 
     // Per-test analysis (only reliable when employee is identified)
-    const completedTests = withTests.map(test => {
+    const completedTests = []
+    for (const test of withTests) {
       const th = test.thresholds ?? {}
-      if (!hasData(th)) { emptyTests++; return { test, isEmpty: true, isDuplicate: false, wouldBaseline: false } }
+      if (!hasData(th)) { emptyTests++; completedTests.push({ test, isEmpty: true, isDuplicate: false, wouldBaseline: false }); continue }
 
-      let isDup      = false
-      let wouldBl    = false
+      let isDup   = false
+      let wouldBl = false
 
       if (match.employee && !match.needsConfirmation) {
         isDup   = isDuplicateTest(match.employee.employee_id, test, techId)
         wouldBl = !isDup && !getActiveBaseline(match.employee.employee_id)
-      } else if (match.type === 'new') {
-        wouldBl = false  // corrected by the fixup loop below once completedTests is fully built
       }
 
       if (!isDup && match.employee && !match.needsConfirmation) toImport++
       if (isDup) duplicates++
-      return { test, isEmpty: false, isDuplicate: isDup, wouldBaseline: wouldBl }
-    })
+      completedTests.push({ test, isEmpty: false, isDuplicate: isDup, wouldBaseline: wouldBl })
+    }
 
-    // For new persons: first non-empty, non-dup test would baseline (set correctly above)
+    // For new persons: first non-empty, non-dup test becomes the baseline
     if (match.type === 'new') {
       let foundFirst = false
       for (const ct of completedTests) {
@@ -396,6 +395,7 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
           triggering_freq_hz:       cl.triggering_freq_hz,
           triggering_ear:           cl.triggering_ear,
           shift_db:                 cl.shift_db,
+          tech_iat:                 packet.tech?.tech_iat ?? null,
         })
 
         if (test.hpd_assessment?.valid || test.hpd_assessment?.hpd_make_model) {

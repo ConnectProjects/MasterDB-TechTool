@@ -303,6 +303,8 @@ export function mount(container, { navigate, locationId, companyId, session }) {
         hpdInventory:     [],
         techId:           tech.tech_id,
         techInitials:     tech.initials ?? tech.name.slice(0, 2).toUpperCase(),
+        techName:         tech.name ?? '',
+        techIat:          tech.iat_number ?? null,
         visitDate:        date,
         stickyNotes:      notes,
       })

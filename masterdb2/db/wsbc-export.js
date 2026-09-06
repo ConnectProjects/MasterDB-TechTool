@@ -90,6 +90,14 @@ function dbThreshold(row, col) {
   return v != null ? String(v) : ''
 }
 
+function yesNo(v) {
+  if (v == null || v === '') return ''
+  const s = String(v).toLowerCase()
+  if (s === 'true' || s === 'yes' || s === '1') return 'Yes'
+  if (s === 'false' || s === 'no' || s === '0') return 'No'
+  return String(v)
+}
+
 /**
  * Generate WSBC CSV for a set of test IDs.
  *
@@ -111,7 +119,7 @@ export function generateWsbcCsv(testIds) {
       e.wsbc_worker_id, e.job_title, e.occupation_code,
       c.name AS employer_name, c.worksafebc_employer_id,
       l.name AS location_number, l.cu_code,
-      tk.name AS tech_name, tk.iat_number AS wsbc_tech_id
+      tk.name AS tech_name, COALESCE(te.tech_iat, tk.iat_number) AS wsbc_tech_id
     FROM tests te
     JOIN employees e ON e.employee_id = te.employee_id
     JOIN locations l ON l.location_id = te.location_id
@@ -169,23 +177,23 @@ export function generateWsbcCsv(testIds) {
       dbThreshold(row, 'right_4k'),
       dbThreshold(row, 'right_6k'),
       dbThreshold(row, 'right_8k'),
-      q.exposed_noise_last_hours       ?? '',
+      yesNo(q.exposed_noise_last_hours),
       q.hours_noise_exposure           ?? '',
-      q.regularly_wear_hpd             ?? '',
+      yesNo(q.regularly_wear_hpd),
       q.hpd_class                      ?? '',
       q.hpd_style                      ?? '',
       q.why_not_wear_hpd               ?? '',
       '',                              // HaveReceivedEducation (not captured in TechTool)
-      q.ear_infection                  ?? '',
-      q.ear_surgery                    ?? '',
-      q.dizziness                      ?? '',
-      q.head_injury                    ?? '',
-      q.childhood_hearing_loss         ?? '',
-      q.tinnitus                       ?? '',
+      yesNo(q.ear_infection),
+      yesNo(q.ear_surgery),
+      yesNo(q.dizziness),
+      yesNo(q.head_injury),
+      yesNo(q.childhood_hearing_loss),
+      yesNo(q.tinnitus),
       q.tinnitus_ear                   ?? '',
       '',                              // WhenFirstNoticed
-      q.blast_exposure                 ?? '',
-      q.firearms                       ?? '',
+      yesNo(q.blast_exposure),
+      yesNo(q.firearms),
       '',                              // FromWhichShoulderShoot
       '',                              // NumYearsShootingFirearms
       'Yes',                           // confirm tech determined category

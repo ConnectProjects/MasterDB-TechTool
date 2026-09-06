@@ -50,7 +50,7 @@ export const PACKET_STATUS = {
  * @param {string} [opts.stickyNotes]     - Office notes to tech
  * @returns {object} packet
  */
-export function createPacket({ company, location, employees, rules, counselTemplates, hpdInventory, techId, techInitials, techName = '', visitDate, stickyNotes = '' }) {
+export function createPacket({ company, location, employees, rules, counselTemplates, hpdInventory, techId, techInitials, techName = '', techIat = null, visitDate, stickyNotes = '' }) {
   const companySlug  = company.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 15)
   const locationSlug = (location?.name ?? '').replace(/[^A-Za-z0-9]/g, '').slice(0, 12)
   const slug         = locationSlug ? `${companySlug}-${locationSlug}` : companySlug
@@ -70,6 +70,7 @@ export function createPacket({ company, location, employees, rules, counselTempl
       tech_id:       techId,
       tech_initials: techInitials,
       tech_name:     techName || null,
+      tech_iat:      techIat  || null,
     },
 
     visit: {

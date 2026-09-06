@@ -229,27 +229,27 @@ export function mount(container, { navigate, session }) {
          </div>`
       : (_wSearch.length >= 2 ? `<div class="nv-search-drop"><div class="nv-search-item" style="color:var(--clr-subtle)">No match — fill in below.</div></div>` : '')
 
+    const dropSpace = wDropHtml ? 'margin-bottom:240px' : 'margin-bottom:0.75rem'
     const addPanelHtml = _wAddMode ? `
       <div class="info-card" style="margin-bottom:1rem">
-        <div class="nv-search-wrap" style="margin-bottom:0.75rem">
+        <div class="nv-search-wrap" style="${dropSpace}">
           <input class="search-input" id="w-search" type="search" autocomplete="off"
-                 placeholder="Search by name…" value="${esc(_wSearch)}">
+                 placeholder="Search existing workers… (or fill in below)" value="${esc(_wSearch)}">
           ${wDropHtml}
         </div>
-        ${_wForm !== null ? `
-          <div class="nv-form-grid">
-            ${fld('wf-first',  'First name *',  _wForm.first_name  ?? '')}
-            ${fld('wf-last',   'Last name *',   _wForm.last_name   ?? '')}
-            ${fld('wf-middle', 'Middle name',   _wForm.middle_name ?? '')}
-            ${fld('wf-dob',    'Date of birth', _wForm.dob         ?? '', 'date')}
-          </div>
-          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem">
-            <button class="btn btn-secondary btn-sm" id="w-cancel">Cancel</button>
-            <button class="btn btn-primary btn-sm" id="w-confirm"
-              ${_wForm.first_name?.trim() && _wForm.last_name?.trim() ? '' : 'disabled'}>
-              Add Worker
-            </button>
-          </div>` : ''}
+        <div class="nv-form-grid">
+          ${fld('wf-first',  'First name *',  _wForm.first_name  ?? '')}
+          ${fld('wf-last',   'Last name *',   _wForm.last_name   ?? '')}
+          ${fld('wf-middle', 'Middle name',   _wForm.middle_name ?? '')}
+          ${fld('wf-dob',    'Date of birth', _wForm.dob         ?? '', 'date')}
+        </div>
+        <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.75rem">
+          <button class="btn btn-secondary btn-sm" id="w-cancel">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="w-confirm"
+            ${_wForm.first_name?.trim() && _wForm.last_name?.trim() ? '' : 'disabled'}>
+            Add Worker
+          </button>
+        </div>
       </div>`
       : `<button class="btn btn-secondary" id="w-add-open" style="margin-bottom:1rem">+ Add Worker</button>`
 
@@ -401,7 +401,8 @@ export function mount(container, { navigate, session }) {
 
   function bindWorkers() {
     container.querySelector('#w-add-open')?.addEventListener('click', () => {
-      _wAddMode = true; _wSearch = ''; _wResults = []; _wForm = null
+      _wAddMode = true; _wSearch = ''; _wResults = []
+      _wForm = { first_name:'', middle_name:'', last_name:'', dob:'' }
       renderBody()
     })
 
@@ -411,9 +412,8 @@ export function mount(container, { navigate, session }) {
       if (_wSearch.length >= 2) {
         const all = searchWorkers(_wSearch, { includeInactive: false })
         _wResults = all.filter(r => !_workers.some(w => w.id === r.employee_id)).slice(0, 8)
-        if (!_wResults.length) _wForm = { first_name:'', middle_name:'', last_name:'', dob:'' }
       } else {
-        _wResults = []; _wForm = null
+        _wResults = []
       }
       renderBody()
       const el = container.querySelector('#w-search')
@@ -557,6 +557,7 @@ export function mount(container, { navigate, session }) {
         hpdInventory:     [],
         techId:           techRow.tech_id,
         techInitials:     initials,
+        techIat:          techRow.iat_number ?? null,
         visitDate:        today,
       })
     } catch (e) {
