@@ -119,12 +119,17 @@ export function generateWsbcCsv(testIds) {
       e.wsbc_worker_id, e.job_title, e.occupation_code,
       c.name AS employer_name, c.worksafebc_employer_id,
       l.name AS location_number, l.cu_code,
-      tk.name AS tech_name, COALESCE(te.tech_iat, tk.iat_number) AS wsbc_tech_id
+      COALESCE(tk.name, tkn.name, u.name)                           AS tech_name,
+      COALESCE(te.tech_iat, tk.iat_number, tkn.iat_number)         AS wsbc_tech_id
     FROM tests te
-    JOIN employees e ON e.employee_id = te.employee_id
-    JOIN locations l ON l.location_id = te.location_id
-    JOIN companies c ON c.company_id  = l.company_id
-    LEFT JOIN techs tk ON tk.tech_id = te.tech_id
+    JOIN employees e  ON e.employee_id    = te.employee_id
+    JOIN locations l  ON l.location_id    = te.location_id
+    JOIN companies c  ON c.company_id     = l.company_id
+    LEFT JOIN techs tk  ON tk.tech_id     = te.tech_id
+    LEFT JOIN users u   ON u.user_id      = te.tech_id
+    LEFT JOIN techs tkn ON tk.tech_id IS NULL
+                       AND LOWER(tkn.name) = LOWER(u.name)
+                       AND tkn.active = 1
     WHERE te.test_id IN (${placeholders}) AND te.deleted_at IS NULL
     ORDER BY te.test_date, e.last_name, e.first_name
   `, testIds)

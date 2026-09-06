@@ -380,7 +380,7 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
           employee_id:              employeeId,
           location_id:              resolvedLocation.location_id,
           test_date:                test.test_date,
-          tech_id:                  test.tech_id ?? techId,
+          tech_id:                  techId ?? test.tech_id,
           test_type:                baseline ? (test.test_type ?? 'Periodic') : 'Baseline',
           province,
           ...th,
