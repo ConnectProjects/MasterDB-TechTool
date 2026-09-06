@@ -229,6 +229,7 @@ export async function parseWsbcZip(arrayBuffer) {
       wsbc_worker_id:      String(row['Worker ID']         ?? '').trim(),
       operating_location:  extractLocNum(row['Operating Location'] ?? ''),
       wsbc_tech_id:        String(row['Technician ID']     ?? '').trim(),
+      cu_code:             String(row['CU Code']           ?? '').trim() || null,
       test_date:           wsbcDate(row['Test Date']),
       thresholds:          th,
       questionnaire: {
@@ -287,22 +288,25 @@ function resolveOrCreateCompany(employer) {
   return { company: queryOne('SELECT * FROM companies WHERE company_id = ?', [companyId]), created: true }
 }
 
-function resolveOrCreateLocation(companyId, locNumber, address, city) {
+function resolveOrCreateLocation(companyId, locNumber, address, city, cuCode = null) {
   const row = queryOne(
     'SELECT * FROM locations WHERE company_id = ? AND name = ? AND active = 1',
     [companyId, locNumber]
   )
   if (row) {
-    // Backfill city if it wasn't set before
-    if (!row.city && city) {
-      run("UPDATE locations SET city = ?, updated_at = datetime('now') WHERE location_id = ?",
-        [city, row.location_id])
+    const updates = []
+    const vals = []
+    if (!row.city && city)     { updates.push('city = ?');     vals.push(city) }
+    if (!row.cu_code && cuCode){ updates.push('cu_code = ?');  vals.push(cuCode) }
+    if (updates.length) {
+      updates.push("updated_at = datetime('now')")
+      run(`UPDATE locations SET ${updates.join(', ')} WHERE location_id = ?`, [...vals, row.location_id])
     }
-    return { location: { ...row, city: city ?? row.city }, created: false }
+    return { location: { ...row, city: city ?? row.city, cu_code: cuCode ?? row.cu_code }, created: false }
   }
   run(
-    `INSERT INTO locations (company_id, name, province, address, city, active) VALUES (?, ?, 'BC', ?, ?, 1)`,
-    [companyId, locNumber, address || null, city || null]
+    `INSERT INTO locations (company_id, name, province, address, city, cu_code, active) VALUES (?, ?, 'BC', ?, ?, ?, 1)`,
+    [companyId, locNumber, address || null, city || null, cuCode || null]
   )
   const locationId = scalar('SELECT last_insert_rowid()')
   return { location: queryOne('SELECT * FROM locations WHERE location_id = ?', [locationId]), created: true }
@@ -471,10 +475,18 @@ export async function commitWsbcImport(parsed, writerName) {
     companyId = company.company_id
 
     // 2. All locations — build a map from WSBC Operating Location Number → DB location_id
+    // Also collect CU codes per location from test rows (first non-null wins)
+    const cuCodeByLoc = new Map()
+    for (const t of sortedTests) {
+      if (t.cu_code && !cuCodeByLoc.has(t.operating_location)) {
+        cuCodeByLoc.set(t.operating_location, t.cu_code)
+      }
+    }
+
     const fallbackLocNum = locations[0]?.number ?? '001'
     const locationIdByNum = new Map()
     for (const loc of locations) {
-      const { location } = resolveOrCreateLocation(companyId, loc.number, loc.address, loc.city)
+      const { location } = resolveOrCreateLocation(companyId, loc.number, loc.address, loc.city, cuCodeByLoc.get(loc.number) ?? null)
       locationIdByNum.set(loc.number, location.location_id)
     }
     const fallbackLocationId = locationIdByNum.get(fallbackLocNum) ?? [...locationIdByNum.values()][0]

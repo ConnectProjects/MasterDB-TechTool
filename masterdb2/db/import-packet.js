@@ -329,13 +329,15 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
         employeeId = createPerson({
           first_name:          packetEmp.first_name,
           last_name:           packetEmp.last_name,
-          middle_name:         packetEmp.middle_name   ?? null,
-          dob:                 packetEmp.dob            ?? null,
-          sin_last_4:          packetEmp.sin_last_4     ?? null,
-          phone:               packetEmp.phone           ?? null,
-          email:               packetEmp.email           ?? null,
-          hire_date:           packetEmp.hire_date       ?? null,
-          job_title:           packetEmp.job_title       ?? null,
+          middle_name:         packetEmp.middle_name    ?? null,
+          dob:                 packetEmp.dob             ?? null,
+          sin_last_4:          packetEmp.sin_last_4      ?? null,
+          phone:               packetEmp.phone            ?? null,
+          email:               packetEmp.email            ?? null,
+          hire_date:           packetEmp.hire_date        ?? null,
+          job_title:           packetEmp.job_title        ?? null,
+          occupation_code:     packetEmp.occupation_code  ?? null,
+          gender:              packetEmp.gender            ?? null,
           current_location_id: resolvedLocation.location_id,
           status: 'active',
         })
@@ -356,12 +358,25 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
             sin_last_4: packetEmp.sin_last_4 ?? null, phone: packetEmp.phone ?? null,
             email: packetEmp.email ?? null, hire_date: packetEmp.hire_date ?? null,
             job_title: packetEmp.job_title ?? null,
+            occupation_code: packetEmp.occupation_code ?? null,
+            gender: packetEmp.gender ?? null,
             current_location_id: resolvedLocation.location_id, status: 'active',
           })
           newPersons++
         } else {
           employeeId = match.employee.employee_id
         }
+      }
+
+      // Backfill gender / occupation_code on existing employees if packet has them and DB doesn't
+      if (packetEmp.gender || packetEmp.occupation_code) {
+        run(
+          `UPDATE employees SET
+             gender          = COALESCE(gender,          ?),
+             occupation_code = COALESCE(occupation_code, ?)
+           WHERE employee_id = ?`,
+          [packetEmp.gender ?? null, packetEmp.occupation_code ?? null, employeeId]
+        )
       }
 
       for (const test of withTests) {

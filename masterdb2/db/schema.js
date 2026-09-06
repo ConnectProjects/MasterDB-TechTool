@@ -317,5 +317,6 @@ export const MIGRATIONS_3_1 = [
   ['companies', 'worksafebc_employer_id', 'TEXT'],
   ['employees', 'wsbc_worker_id',         'TEXT'],
   ['employees', 'occupation_code',        'TEXT'],
+  ['employees', 'gender',                 'TEXT'],
   ['tests',     'tech_iat',               'TEXT'],
 ]

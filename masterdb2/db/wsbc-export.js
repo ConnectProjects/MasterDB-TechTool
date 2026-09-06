@@ -127,7 +127,8 @@ export function generateWsbcCsv(testIds) {
       te.left_500, te.left_1k, te.left_2k, te.left_3k, te.left_4k, te.left_6k, te.left_8k,
       te.right_500, te.right_1k, te.right_2k, te.right_3k, te.right_4k, te.right_6k, te.right_8k,
       te.questionnaire,
-      e.first_name, e.middle_name, e.last_name, e.dob, e.sin_last_4, e.phone AS worker_phone, e.email AS worker_email,
+      e.first_name, e.middle_name, e.last_name, e.dob, e.sin_last_4, e.gender,
+      e.phone AS worker_phone, e.email AS worker_email,
       e.wsbc_worker_id, e.job_title, e.occupation_code,
       c.name AS employer_name, c.worksafebc_employer_id,
       l.name AS location_number, l.cu_code,
@@ -169,7 +170,7 @@ export function generateWsbcCsv(testIds) {
       row.last_name   ?? '',
       '',                              // Worker Abbr Name
       isoToWsbc(row.dob),
-      '',                              // Gender
+      row.gender ?? '',
       row.sin_last_4  ?? '',
       q.years_in_occupation            ?? '',
       row.worksafebc_employer_id ?? '',
@@ -194,18 +195,21 @@ export function generateWsbcCsv(testIds) {
       dbThreshold(row, 'right_4k'),
       dbThreshold(row, 'right_6k'),
       dbThreshold(row, 'right_8k'),
-      noiseHours(q.noise_2h, q.noise_2h_duration),
-      q.noise_2h_duration              ?? '',
-      yesNo(q.wear_hpd),
+      // TechTool keys first, fall back to WSBC-import keys (BC Hydro data)
+      q.noise_2h != null
+        ? noiseHours(q.noise_2h, q.noise_2h_duration)
+        : (q.exposed_noise_last_hours ?? ''),
+      q.noise_2h_duration              ?? q.hours_noise_exposure ?? '',
+      yesNo(q.wear_hpd                 ?? q.regularly_wear_hpd),
       q.hpd_class                      ?? '',
       q.hpd_style                      ?? '',
-      q.hpd_no_reason                  ?? '',
+      q.hpd_no_reason                  ?? q.why_not_wear_hpd ?? '',
       yesNo(q.employer_info),
       yesNo(q.ear_infection),
       yesNo(q.ear_surgery),
       yesNo(q.dizziness),
       yesNo(q.head_injury),
-      yesNo(q.childhood_loss),
+      yesNo(q.childhood_loss           ?? q.childhood_hearing_loss),
       yesNo(q.tinnitus),
       q.tinnitus_ear                   ?? '',
       '',                              // WhenFirstNoticed
