@@ -57,15 +57,17 @@ export function mount(container, { navigate, employeeId, fromLocation, session }
         ${_editing ? workerEditForm(emp) : `
           <div class="info-card">
             <dl>
-              ${row('Date of Birth', emp.dob ? fmtDate(emp.dob) : null)}
-              ${row('SIN (last 4)',  sinDisplay)}
-              ${row('Phone',        emp.phone)}
-              ${row('Email',        emp.email)}
-              ${row('Job Title',    emp.job_title ? `${emp.job_title}${emp.occupation_code ? ` (${emp.occupation_code})` : ''}` : null)}
-              ${row('Hire Date',    emp.hire_date ? fmtDate(emp.hire_date) : null)}
-              ${row('Location',     locDisplay)}
-              ${row('Company',      emp.company_name)}
-              ${row('UID',          emp.uid)}
+              ${row('Date of Birth',    emp.dob ? fmtDate(emp.dob) : null)}
+              ${row('Gender',          emp.gender)}
+              ${row('SIN (last 4)',    sinDisplay)}
+              ${row('Phone',           emp.phone)}
+              ${row('Email',           emp.email)}
+              ${row('Job Title',       emp.job_title ? `${emp.job_title}${emp.occupation_code ? ` (${emp.occupation_code})` : ''}` : null)}
+              ${row('Hire Date',       emp.hire_date ? fmtDate(emp.hire_date) : null)}
+              ${row('WSBC Worker ID',  emp.wsbc_worker_id)}
+              ${row('Location',        locDisplay)}
+              ${row('Company',         emp.company_name)}
+              ${row('UID',             emp.uid)}
             </dl>
           </div>
         `}
@@ -116,8 +118,8 @@ export function mount(container, { navigate, employeeId, fromLocation, session }
       const noc = _nocPicker?.getValue()
       run(
         `UPDATE employees SET first_name=?, middle_name=?, last_name=?, dob=?, job_title=?,
-         occupation_code=?, hire_date=?, phone=?, email=?, sin_last_4=?, status=?,
-         updated_at=datetime('now') WHERE employee_id=?`,
+         occupation_code=?, hire_date=?, phone=?, email=?, sin_last_4=?, gender=?,
+         wsbc_worker_id=?, status=?, updated_at=datetime('now') WHERE employee_id=?`,
         [first,
          container.querySelector('#ef-middle')?.value.trim()  || null,
          last,
@@ -128,6 +130,8 @@ export function mount(container, { navigate, employeeId, fromLocation, session }
          container.querySelector('#ef-phone')?.value.trim()  || null,
          container.querySelector('#ef-email')?.value.trim()  || null,
          container.querySelector('#ef-sin')?.value.trim()    || null,
+         container.querySelector('#ef-gender')?.value        || null,
+         container.querySelector('#ef-wsbc')?.value.trim()   || null,
          container.querySelector('#ef-status')?.value        || 'active',
          employeeId]
       )
@@ -180,8 +184,21 @@ function workerEditForm(emp) {
           <input class="search-input" id="ef-email" value="${esc(emp.email ?? '')}">
         </div>
         <div>
+          <label class="field-label">Gender</label>
+          <select class="form-select" id="ef-gender" style="width:100%">
+            <option value="">—</option>
+            <option value="Male"    ${emp.gender === 'Male'    ? 'selected' : ''}>Male</option>
+            <option value="Female"  ${emp.gender === 'Female'  ? 'selected' : ''}>Female</option>
+            <option value="Unknown" ${emp.gender === 'Unknown' ? 'selected' : ''}>Unknown</option>
+          </select>
+        </div>
+        <div>
           <label class="field-label">SIN (last 4)</label>
           <input class="search-input" id="ef-sin" value="${esc(emp.sin_last_4 ?? '')}" maxlength="4">
+        </div>
+        <div>
+          <label class="field-label">WSBC Worker ID</label>
+          <input class="search-input" id="ef-wsbc" value="${esc(emp.wsbc_worker_id ?? '')}" placeholder="from WorkSafeBC portal">
         </div>
         <div>
           <label class="field-label">Status</label>
