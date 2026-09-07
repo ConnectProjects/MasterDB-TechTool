@@ -294,6 +294,27 @@ export function validateWsbcExport(testIds) {
     if (q.childhood_loss == null && q.childhood_hearing_loss == null) {
       testIssues.push(`${dateLbl} — Childhood hearing loss question not answered (HadHearingLossInChildhood)`)
     }
+    if (q.ear_infection == null) {
+      testIssues.push(`${dateLbl} — Ear infection question not answered (HadSevereEarInfection)`)
+    }
+    if (q.ear_surgery == null) {
+      testIssues.push(`${dateLbl} — Ear surgery question not answered (HadEarSurgery)`)
+    }
+    if (q.dizziness == null) {
+      testIssues.push(`${dateLbl} — Dizziness question not answered (HadDizzinessOrBalanceProblems)`)
+    }
+    if (q.head_injury == null) {
+      testIssues.push(`${dateLbl} — Head injury question not answered (HadSeriousHeadInjury)`)
+    }
+    if (q.tinnitus == null) {
+      testIssues.push(`${dateLbl} — Ringing in ears question not answered (HasRingingInEars)`)
+    }
+    if (q.blast_exposure == null) {
+      testIssues.push(`${dateLbl} — Loud blast exposure question not answered (HadExposureToLoudBlast)`)
+    }
+    if (q.firearms == null) {
+      testIssues.push(`${dateLbl} — Firearms question not answered (HasUsedFirearms)`)
+    }
     if (!q.years_in_occupation) {
       testIssues.push(`${dateLbl} — Years in occupation not recorded`)
     }
@@ -411,7 +432,7 @@ export function generateWsbcCsv(testIds) {
       mapHpdClass(q.hpd_class          ?? q.hpd_protection_class),
       mapHpdStyle(q.hpd_style          ?? q.hearing_prot_style),
       mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'Yes'
-        ? 'N/A'
+        ? ''
         : mapHpdReason(q.hpd_no_reason || q.why_not_wear_hpd),
       mapYN(q.employer_info),
       mapYN(q.ear_infection),
