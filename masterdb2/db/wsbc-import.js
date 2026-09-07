@@ -315,7 +315,13 @@ function resolveOrCreateLocation(companyId, locNumber, address, city, cuCode = n
 function resolveOrCreateEmployee(worker, locationId) {
   if (worker.wsbc_worker_id) {
     const row = queryOne('SELECT * FROM employees WHERE wsbc_worker_id = ? AND deleted_at IS NULL', [worker.wsbc_worker_id])
-    if (row) return { employeeId: row.employee_id, created: false }
+    if (row) {
+      if (!row.gender && worker.gender) {
+        run('UPDATE employees SET gender=?, updated_at=datetime(\'now\') WHERE employee_id=?',
+          [worker.gender, row.employee_id])
+      }
+      return { employeeId: row.employee_id, created: false }
+    }
   }
   const candidates = matchCandidates(
     { first_name: worker.first_name, last_name: worker.last_name, dob: worker.dob, sin_last_4: worker.sin_last_4 },
@@ -327,6 +333,7 @@ function resolveOrCreateEmployee(worker, locationId) {
     if (!emp.wsbc_worker_id  && worker.wsbc_worker_id)  { updates.push('wsbc_worker_id=?');  vals.push(worker.wsbc_worker_id)  }
     if (!emp.occupation_code && worker.occupation_code) { updates.push('occupation_code=?'); vals.push(worker.occupation_code) }
     if (!emp.job_title       && worker.job_title)       { updates.push('job_title=?');       vals.push(worker.job_title)       }
+    if (!emp.gender          && worker.gender)          { updates.push('gender=?');          vals.push(worker.gender)          }
     if (updates.length) {
       run(`UPDATE employees SET ${updates.join(',')}, updated_at=datetime('now') WHERE employee_id=?`,
         [...vals, emp.employee_id])
@@ -340,6 +347,7 @@ function resolveOrCreateEmployee(worker, locationId) {
     dob:                 worker.dob            ?? null,
     sin_last_4:          worker.sin_last_4     ?? null,
     job_title:           worker.job_title      ?? null,
+    gender:              worker.gender          ?? null,
     current_location_id: locationId,
     status: 'active',
   })
