@@ -90,12 +90,12 @@ function dbThreshold(row, col) {
   return v != null ? String(v) : ''
 }
 
-// WSBC expects Y/N (not Yes/No)
+// WSBC CSV expects Yes/No for boolean fields
 function mapYN(v) {
   if (v == null || v === '') return ''
   const s = String(v).toLowerCase()
-  if (s === 'true' || s === 'yes' || s === 'y' || s === '1') return 'Y'
-  if (s === 'false' || s === 'no' || s === 'n' || s === '0') return 'N'
+  if (s === 'true' || s === 'yes' || s === 'y' || s === '1') return 'Yes'
+  if (s === 'false' || s === 'no' || s === 'n' || s === '0') return 'No'
   return ''
 }
 
@@ -284,7 +284,7 @@ export function validateWsbcExport(testIds) {
     }
     // WhyNotWear is required only when the worker does not wear HPD.
     // Use yesNo() so the check exactly mirrors what the export outputs.
-    const notWearing = mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'N'
+    const notWearing = mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'No'
     if (notWearing && !(q.hpd_no_reason || q.why_not_wear_hpd)) {
       testIssues.push(`${dateLbl} — Worker does not wear HPD but no reason was recorded (WhyNotWearHearingProtReg)`)
     }
@@ -410,8 +410,8 @@ export function generateWsbcCsv(testIds) {
       mapYN(q.wear_hpd                 ?? q.regularly_wear_hpd),
       mapHpdClass(q.hpd_class          ?? q.hpd_protection_class),
       mapHpdStyle(q.hpd_style          ?? q.hearing_prot_style),
-      mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'Y'
-        ? ''
+      mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'Yes'
+        ? 'N/A'
         : mapHpdReason(q.hpd_no_reason || q.why_not_wear_hpd),
       mapYN(q.employer_info),
       mapYN(q.ear_infection),
@@ -426,8 +426,8 @@ export function generateWsbcCsv(testIds) {
       mapYN(q.firearms),
       mapSide(q.firearms_shoulder),
       mapFirearmsDuration(q.firearms_duration ?? q.num_years_shooting),
-      'Y',                             // confirm tech determined category
-      'Y',                             // confirm tech counselled worker
+      'Yes',                           // confirm tech determined category
+      'Yes',                           // confirm tech counselled worker
       row.worker_email                 ?? '',
       row.worker_phone                 ?? '',
     ]
