@@ -6,6 +6,7 @@
  */
 
 import { query } from '../db/db.js'
+import { generateWsbcCsv, validateWsbcExport } from '../db/wsbc-export.js'
 
 export function mount(container) {
   const today       = new Date()
@@ -186,6 +187,9 @@ export function mount(container) {
     const totalWorkers = workerRows.length
     const totalVisits  = visits.length
 
+    // Check if any BC location is present (for WSBC export button)
+    const hasBcLocation = visits.some(v => v.province === 'BC')
+
     const blocksHTML = visits.map(v => {
       const workerRowsHTML = v.workers.map(w => `
         <tr><td>${esc(w.name)}</td><td>${esc(w.category)}</td></tr>
@@ -220,14 +224,18 @@ export function mount(container) {
     }).join('')
 
     output.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
         <p style="font-size:0.875rem;color:var(--clr-subtle)">
           ${totalVisits} visit${totalVisits !== 1 ? 's' : ''}
           &nbsp;&mdash;&nbsp;
           <strong>${totalWorkers}</strong> worker${totalWorkers !== 1 ? 's' : ''} tested
         </p>
-        <button class="btn btn-secondary" id="r-csv">Export to Excel</button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button class="btn btn-secondary" id="r-csv">Export to Excel</button>
+          ${hasBcLocation ? `<button class="btn btn-secondary" id="r-wsbc-csv" title="Generate WorkSafeBC File_Upload_Template CSV">Export for WSBC</button>` : ''}
+        </div>
       </div>
+      <div id="r-wsbc-validation"></div>
       ${blocksHTML}
     `
 
@@ -278,6 +286,51 @@ export function mount(container) {
       ]
       downloadCSV(`connect-hearing-report-${from}-to-${to}.csv`, csvData)
     })
+
+    if (hasBcLocation) {
+      output.querySelector('#r-wsbc-csv')?.addEventListener('click', () => {
+        const validEl = output.querySelector('#r-wsbc-validation')
+        validEl.innerHTML = ''
+
+        try {
+          const sql3 = `
+            SELECT te.test_id FROM tests te
+            JOIN  locations l ON l.location_id = te.location_id
+            JOIN  companies c ON c.company_id  = l.company_id
+            WHERE te.deleted_at IS NULL AND l.province = 'BC'
+              AND te.test_date >= ? AND te.test_date <= ?
+              ${companyId ? 'AND c.company_id = ?' : ''}
+              ${locationClause(locationIds)}
+            ORDER BY te.test_date`
+          const p3 = [from, to,
+            ...(companyId ? [Number(companyId)] : []),
+            ...locationIds
+          ]
+          const ids = query(sql3, p3).map(r => r.test_id)
+          if (!ids.length) {
+            validEl.innerHTML = `<div class="warning-banner" style="margin-bottom:1rem">No BC tests in the selected date range and location filter.</div>`
+            return
+          }
+
+          const { valid, groups, totalCount } = validateWsbcExport(ids)
+          if (!valid) {
+            validEl.innerHTML = renderWsbcValidationErrors(groups, totalCount)
+            validEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            return
+          }
+
+          const { csv, filename } = generateWsbcCsv(ids)
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+          const url  = URL.createObjectURL(blob)
+          const a    = Object.assign(document.createElement('a'), { href: url, download: filename })
+          document.body.appendChild(a); a.click(); document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        } catch (e) {
+          output.querySelector('#r-wsbc-validation').innerHTML =
+            `<div class="error-banner" style="margin-bottom:1rem"><strong>Export failed:</strong> ${esc(e.message)}</div>`
+        }
+      })
+    }
   }
 }
 
@@ -304,5 +357,61 @@ function esc(s) {
 function fmtDate(d) {
   if (!d) return ''
   try { return new Date(d + 'T00:00:00').toLocaleDateString('en-CA') } catch { return d }
+}
+
+function renderWsbcValidationErrors(groups, totalCount) {
+  const sectionStyle = 'margin-bottom:0.9rem'
+  const labelStyle   = 'font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#8b1a1a;margin:0 0 0.3rem'
+  const listStyle    = 'margin:0;padding-left:1.25rem;font-size:0.85rem;line-height:1.6'
+
+  const sections = []
+
+  if (groups.company.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Company setup (${groups.company.length})</p>
+        <ul style="${listStyle}">${groups.company.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.location.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Location setup (${groups.location.length})</p>
+        <ul style="${listStyle}">${groups.location.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.worker.length) {
+    const totalFields = groups.worker.reduce((n, w) => n + w.fields.length, 0)
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Worker records — ${totalFields} missing field${totalFields !== 1 ? 's' : ''} across ${groups.worker.length} worker${groups.worker.length !== 1 ? 's' : ''}</p>
+        <ul style="${listStyle}">${groups.worker.map(w =>
+          `<li><strong>${esc(w.name)}</strong> — missing: ${w.fields.map(esc).join(', ')}</li>`
+        ).join('')}</ul>
+      </div>`)
+  }
+
+  if (groups.test.length) {
+    sections.push(`
+      <div style="${sectionStyle}">
+        <p style="${labelStyle}">Questionnaire / test data (${groups.test.length} issue${groups.test.length !== 1 ? 's' : ''})</p>
+        <ul style="${listStyle}">${groups.test.map(e => `<li>${esc(e)}</li>`).join('')}</ul>
+      </div>`)
+  }
+
+  return `
+    <div style="margin-bottom:1.25rem;padding:1rem 1.25rem;border-radius:var(--radius);
+                border-left:4px solid #c0392b;background:#fff8f7;
+                border:1px solid #f5c6c6;border-left:4px solid #c0392b">
+      <p style="font-weight:700;color:#c0392b;margin:0 0 0.75rem;font-size:0.95rem">
+        Export blocked &mdash; ${totalCount} issue${totalCount !== 1 ? 's' : ''} must be corrected before generating the WSBC file
+      </p>
+      ${sections.join('')}
+      <p style="font-size:0.8rem;color:var(--clr-subtle);margin:0.5rem 0 0">
+        Correct the above in company, location, or worker settings, then click <strong>Export for WSBC</strong> again.
+      </p>
+    </div>`
 }
 

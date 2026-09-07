@@ -158,13 +158,15 @@ export function getHpdAssessments(testId) {
 // Fields the UI is allowed to set on a new person.
 const CREATE_FIELDS = [
   'current_location_id', 'first_name', 'middle_name', 'last_name',
-  'dob', 'sin_last_4', 'phone', 'email', 'hire_date', 'job_title', 'status', 'uid'
+  'dob', 'sin_last_4', 'phone', 'email', 'hire_date', 'job_title',
+  'occupation_code', 'gender', 'status', 'uid'
 ]
 
 // Fields that can be updated after creation (identity and contact only).
 const UPDATE_FIELDS = [
   'current_location_id', 'first_name', 'middle_name', 'last_name',
-  'dob', 'sin_last_4', 'phone', 'email', 'hire_date', 'job_title', 'status'
+  'dob', 'sin_last_4', 'phone', 'email', 'hire_date', 'job_title',
+  'occupation_code', 'gender', 'status'
 ]
 
 /**

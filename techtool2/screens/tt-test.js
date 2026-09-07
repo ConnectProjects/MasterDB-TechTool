@@ -15,6 +15,7 @@
 import { query, readTechPacket, saveTechPacket, submitTechPacket } from '../../masterdb2/db/db.js'
 import { search as searchWorkers } from '../../masterdb2/db/workers.js'
 import { appendTestResult, markEmployeeSkipped, markSubmitted } from '../../shared/packet/schema.js'
+import { mountNocPicker } from '../../shared/components/noc-picker.js'
 
 const FREQS = ['500', '1k', '2k', '3k', '4k', '6k', '8k']
 const THR_OPTIONS = ['--', 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 'NR']
@@ -38,6 +39,7 @@ export function mount(container, { navigate, session, filename, techFolder }) {
   let _packet     = null
   let _slots      = [emptySlot(), emptySlot()]
   let _activeSlot = 0
+  let _nocPicker  = null   // NOC picker instance for the currently rendered booth form
   let _mode        = 'list'   // 'list' | 'test'
   let _status      = null     // { ok, msg }
   let _selected    = new Set()
@@ -478,25 +480,27 @@ export function mount(container, { navigate, session, filename, techFolder }) {
                 <input class="search-input" id="ef-first" value="${esc(emp.first_name ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Middle name</label>
                 <input class="search-input" id="ef-middle" value="${esc(emp.middle_name ?? '')}" style="width:100%"></div>
-              <div><label class="field-label">Date of birth</label>
+              <div><label class="field-label">Date of birth${isBC ? ' *' : ''}</label>
                 <input class="search-input" id="ef-dob" type="date" value="${esc(emp.dob ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Last test</label>
                 <div class="search-input" style="width:100%;background:var(--clr-surface);color:${lastTestDate ? 'inherit' : 'var(--clr-subtle)'}">${lastTestDate ? esc(lastTestDate) : 'None on file'}</div></div>
-              <div><label class="field-label">Job title</label>
-                <input class="search-input" id="ef-job" value="${esc(emp.job_title ?? '')}" style="width:100%"></div>
+              <div style="grid-column:1/-1"><label class="field-label">Job title${isBC ? ' *' : ''}</label>
+                <div id="ef-job-wrap" style="width:100%"></div></div>
               ${isBC ? `
-              <div><label class="field-label">Gender</label>
+              <div><label class="field-label">Gender *</label>
                 <select class="form-select" id="ef-gender" style="width:100%">
                   <option value="">—</option>
                   ${['Male','Female','Other'].map(g =>
                     `<option value="${g}"${(emp.gender ?? '') === g ? ' selected' : ''}>${g}</option>`
                   ).join('')}
                 </select></div>
-              <div><label class="field-label">SIN last 4</label>
-                <input class="search-input" id="ef-sin" maxlength="4" value="${esc(emp.sin_last_4 ?? '')}" style="width:100%"></div>
-              <div><label class="field-label">Yrs in occupation</label>
+              <div><label class="field-label">Yrs in occupation *</label>
                 <input class="search-input" id="ef-years" type="number" min="0" max="60"
                        value="${esc(slot.pre?.years_in_occupation ?? '')}" style="width:100%"></div>
+              <div><label class="field-label">Location CU Code</label>
+                <input class="search-input" id="loc-cu-code" value="${esc(p.location?.cu_code ?? '')}" style="width:100%"></div>
+              <div><label class="field-label">SIN last 4</label>
+                <input class="search-input" id="ef-sin" maxlength="4" value="${esc(emp.sin_last_4 ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Email</label>
                 <input class="search-input" id="ef-email" type="email" value="${esc(emp.email ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Phone</label>
@@ -595,6 +599,22 @@ export function mount(container, { navigate, session, filename, techFolder }) {
     wirePreQ()
     wirePostQ()
     wireAudiograms()
+
+    // Mount NOC picker for job title
+    const jobWrap = container.querySelector('#ef-job-wrap')
+    if (jobWrap) {
+      const slot = _slots[_activeSlot]
+      const emp  = slot.empIdx != null ? _packet.employees[slot.empIdx] : null
+      _nocPicker = mountNocPicker(jobWrap, {
+        jobTitle:       slot.empEdits?.job_title       ?? emp?.job_title       ?? '',
+        occupationCode: slot.empEdits?.occupation_code ?? emp?.occupation_code ?? '',
+        onChange: ({ title, code }) => {
+          if (!slot.empEdits) slot.empEdits = {}
+          slot.empEdits.job_title       = title
+          slot.empEdits.occupation_code = code
+        },
+      })
+    }
   }
 
   function wireAudiograms() {
@@ -790,17 +810,22 @@ export function mount(container, { navigate, session, filename, techFolder }) {
       return el ? el.value === 'true' : null
     }
 
+    const nocVal = _nocPicker?.getValue()
     slot.empEdits = {
-      last_name:   q('#ef-last')?.value.trim()   || null,
-      first_name:  q('#ef-first')?.value.trim()  || null,
-      middle_name: q('#ef-middle')?.value.trim() || null,
-      dob:         q('#ef-dob')?.value            || null,
-      job_title:   q('#ef-job')?.value.trim()    || null,
-      gender:      q('#ef-gender')?.value         || null,
-      sin_last_4:  q('#ef-sin')?.value.trim()    || null,
-      email:       q('#ef-email')?.value.trim()  || null,
-      phone:       q('#ef-phone')?.value.trim()  || null,
+      last_name:       q('#ef-last')?.value.trim()   || null,
+      first_name:      q('#ef-first')?.value.trim()  || null,
+      middle_name:     q('#ef-middle')?.value.trim() || null,
+      dob:             q('#ef-dob')?.value            || null,
+      job_title:       nocVal?.title  || slot.empEdits?.job_title       || null,
+      occupation_code: nocVal?.code   || slot.empEdits?.occupation_code || null,
+      gender:          q('#ef-gender')?.value         || null,
+      sin_last_4:      q('#ef-sin')?.value.trim()    || null,
+      email:           q('#ef-email')?.value.trim()  || null,
+      phone:           q('#ef-phone')?.value.trim()  || null,
     }
+
+    const cuCode = q('#loc-cu-code')?.value.trim()
+    if (cuCode && _packet.location) _packet.location.cu_code = cuCode
 
     slot.testType = q('#tf-type')?.value  ?? 'Periodic'
     slot.testDate = q('#tf-date')?.value  ?? ''
@@ -866,7 +891,20 @@ export function mount(container, { navigate, session, filename, techFolder }) {
     const anyThreshold = Object.values(slot.thresholds).some(v => v != null)
     if (!anyThreshold) { showErr(errEl, 'Enter at least one threshold value.'); return }
 
-    const emp = _packet.employees[slot.empIdx]
+    const emp    = _packet.employees[slot.empIdx]
+    const isBC   = (_packet.visit?.province ?? _packet.company?.province) === 'BC'
+
+    if (isBC) {
+      const dob    = slot.empEdits?.dob             ?? emp.dob
+      const gender = slot.empEdits?.gender          ?? emp.gender
+      const noc    = slot.empEdits?.occupation_code ?? emp.occupation_code
+      const years  = slot.pre?.years_in_occupation
+
+      if (!dob)    { showErr(errEl, 'Date of birth is required for BC WSBC reporting.'); return }
+      if (!gender) { showErr(errEl, 'Gender is required for BC WSBC reporting.'); return }
+      if (!noc)    { showErr(errEl, 'Occupation code (job title) is required for BC WSBC reporting.'); return }
+      if (!years)  { showErr(errEl, 'Years in occupation is required for BC WSBC reporting.'); return }
+    }
 
     // Apply worker info corrections into the packet
     if (slot.empEdits) {
@@ -874,9 +912,10 @@ export function mount(container, { navigate, session, filename, techFolder }) {
       if (slot.empEdits.first_name) emp.first_name = slot.empEdits.first_name
       emp.middle_name = slot.empEdits.middle_name ?? emp.middle_name
       emp.dob         = slot.empEdits.dob         ?? emp.dob
-      emp.job_title   = slot.empEdits.job_title   ?? emp.job_title
-      emp.gender      = slot.empEdits.gender      ?? emp.gender    ?? null
-      emp.sin_last_4  = slot.empEdits.sin_last_4  ?? emp.sin_last_4 ?? null
+      emp.job_title       = slot.empEdits.job_title       ?? emp.job_title
+      emp.occupation_code = slot.empEdits.occupation_code ?? emp.occupation_code ?? null
+      emp.gender          = slot.empEdits.gender          ?? emp.gender    ?? null
+      emp.sin_last_4      = slot.empEdits.sin_last_4      ?? emp.sin_last_4 ?? null
       emp.email       = slot.empEdits.email       ?? emp.email     ?? null
       emp.phone       = slot.empEdits.phone       ?? emp.phone     ?? null
     }
@@ -1062,8 +1101,8 @@ export function mount(container, { navigate, session, filename, techFolder }) {
           p.location?.name    ?? '',
           p.location?.cu_code ?? '',
           '',                                        // CU Description — not captured
-          '',                                        // Occupation Code — not captured
-          emp.job_title   ?? '',
+          emp.occupation_code ?? '',
+          emp.job_title       ?? '',
           test.notes      ?? '',
           th.left_500  ?? '', th.left_1k  ?? '', th.left_2k  ?? '', th.left_3k  ?? '',
           th.left_4k   ?? '', th.left_6k  ?? '', th.left_8k  ?? '',

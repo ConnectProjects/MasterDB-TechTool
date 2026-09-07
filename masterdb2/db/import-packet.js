@@ -25,6 +25,7 @@ import { getById, getByUid, getActiveBaseline, create as createPerson, matchCand
 import { classify }                     from '../../shared/classification/engine.js'
 import { validatePacket }               from '../../shared/packet/schema.js'
 import { reconcileImport, countPacketCompletedTests } from '../../shared/validation/reconcile-import.js'
+import { generateWsbcCsv }              from './wsbc-export.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ const TEST_COLS = [
   ...THR,
   'classification','triggered_rule_id','sts_flag','counsel_text','tech_notes',
   'questionnaire','packet_id','referral_given_to_worker',
-  'triggering_freq_hz','triggering_ear','shift_db'
+  'triggering_freq_hz','triggering_ear','shift_db','tech_iat'
 ]
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -217,27 +218,25 @@ export function previewImport(packet) {
     if (match.type === 'new') newPersons++
 
     // Per-test analysis (only reliable when employee is identified)
-    const completedTests = withTests.map(test => {
+    const completedTests = []
+    for (const test of withTests) {
       const th = test.thresholds ?? {}
-      if (!hasData(th)) { emptyTests++; return { test, isEmpty: true, isDuplicate: false, wouldBaseline: false } }
+      if (!hasData(th)) { emptyTests++; completedTests.push({ test, isEmpty: true, isDuplicate: false, wouldBaseline: false }); continue }
 
-      let isDup      = false
-      let wouldBl    = false
+      let isDup   = false
+      let wouldBl = false
 
       if (match.employee && !match.needsConfirmation) {
         isDup   = isDuplicateTest(match.employee.employee_id, test, techId)
         wouldBl = !isDup && !getActiveBaseline(match.employee.employee_id)
-      } else if (match.type === 'new') {
-        // New person has no prior tests — first completed test will become baseline
-        wouldBl = !isDup && completedTests?.filter(t => !t?.isEmpty).indexOf(test) === 0  // only first
       }
 
       if (!isDup && match.employee && !match.needsConfirmation) toImport++
       if (isDup) duplicates++
-      return { test, isEmpty: false, isDuplicate: isDup, wouldBaseline: wouldBl }
-    })
+      completedTests.push({ test, isEmpty: false, isDuplicate: isDup, wouldBaseline: wouldBl })
+    }
 
-    // For new persons: first non-empty, non-dup test would baseline (set correctly above)
+    // For new persons: first non-empty, non-dup test becomes the baseline
     if (match.type === 'new') {
       let foundFirst = false
       for (const ct of completedTests) {
@@ -299,6 +298,13 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
   const resolvedLocation = resolveLocation(packet, company, decisions.locationId ?? null)
   if (!resolvedLocation) throw new Error(`Location could not be resolved. Provide decisions.locationId.`)
 
+  // Backfill CU code to the location if the tech entered it in TechTool and the DB doesn't have it
+  const packetCuCode = packet.location?.cu_code
+  if (packetCuCode && !resolvedLocation.cu_code) {
+    run(`UPDATE locations SET cu_code=?, updated_at=datetime('now') WHERE location_id=?`,
+      [packetCuCode, resolvedLocation.location_id])
+  }
+
   const rules = (Array.isArray(packet.rules) && packet.rules.length)
     ? packet.rules
     : query('SELECT * FROM classification_rules WHERE province_code = ? ORDER BY priority DESC', [province])
@@ -330,13 +336,15 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
         employeeId = createPerson({
           first_name:          packetEmp.first_name,
           last_name:           packetEmp.last_name,
-          middle_name:         packetEmp.middle_name   ?? null,
-          dob:                 packetEmp.dob            ?? null,
-          sin_last_4:          packetEmp.sin_last_4     ?? null,
-          phone:               packetEmp.phone           ?? null,
-          email:               packetEmp.email           ?? null,
-          hire_date:           packetEmp.hire_date       ?? null,
-          job_title:           packetEmp.job_title       ?? null,
+          middle_name:         packetEmp.middle_name    ?? null,
+          dob:                 packetEmp.dob             ?? null,
+          sin_last_4:          packetEmp.sin_last_4      ?? null,
+          phone:               packetEmp.phone            ?? null,
+          email:               packetEmp.email            ?? null,
+          hire_date:           packetEmp.hire_date        ?? null,
+          job_title:           packetEmp.job_title        ?? null,
+          occupation_code:     packetEmp.occupation_code  ?? null,
+          gender:              packetEmp.gender            ?? null,
           current_location_id: resolvedLocation.location_id,
           status: 'active',
         })
@@ -357,12 +365,25 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
             sin_last_4: packetEmp.sin_last_4 ?? null, phone: packetEmp.phone ?? null,
             email: packetEmp.email ?? null, hire_date: packetEmp.hire_date ?? null,
             job_title: packetEmp.job_title ?? null,
+            occupation_code: packetEmp.occupation_code ?? null,
+            gender: packetEmp.gender ?? null,
             current_location_id: resolvedLocation.location_id, status: 'active',
           })
           newPersons++
         } else {
           employeeId = match.employee.employee_id
         }
+      }
+
+      // Backfill gender / occupation_code on existing employees if packet has them and DB doesn't
+      if (packetEmp.gender || packetEmp.occupation_code) {
+        run(
+          `UPDATE employees SET
+             gender          = COALESCE(gender,          ?),
+             occupation_code = COALESCE(occupation_code, ?)
+           WHERE employee_id = ?`,
+          [packetEmp.gender ?? null, packetEmp.occupation_code ?? null, employeeId]
+        )
       }
 
       for (const test of withTests) {
@@ -381,7 +402,7 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
           employee_id:              employeeId,
           location_id:              resolvedLocation.location_id,
           test_date:                test.test_date,
-          tech_id:                  test.tech_id ?? techId,
+          tech_id:                  techId ?? test.tech_id,
           test_type:                baseline ? (test.test_type ?? 'Periodic') : 'Baseline',
           province,
           ...th,
@@ -396,6 +417,7 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
           triggering_freq_hz:       cl.triggering_freq_hz,
           triggering_ear:           cl.triggering_ear,
           shift_db:                 cl.shift_db,
+          tech_iat:                 packet.tech?.tech_iat ?? null,
         })
 
         if (test.hpd_assessment?.valid || test.hpd_assessment?.hpd_make_model) {
@@ -451,7 +473,13 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
     console.warn('archivePacket failed (data was saved):', archiveWarning)
   }
 
-  return { imported, duplicates, empty: emptyTests, newPersons, backupFile, archiveWarning }
+  // Auto-generate WSBC CSV for BC imports
+  let wsbcCsv = null
+  if (province === 'BC' && insertedTestIds.length) {
+    try { wsbcCsv = generateWsbcCsv(insertedTestIds) } catch { /* non-fatal */ }
+  }
+
+  return { imported, duplicates, empty: emptyTests, newPersons, backupFile, archiveWarning, wsbcCsv }
 }
 
 // ── Auto-import ───────────────────────────────────────────────────────────────

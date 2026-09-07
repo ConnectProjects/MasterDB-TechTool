@@ -128,22 +128,25 @@ export function mount(container, { navigate, companyId, session }) {
 
     const fields = {
       name,
-      city:          container.querySelector('#co-city')?.value.trim()  || null,
-      address:       container.querySelector('#co-addr')?.value.trim()  || null,
-      contact_name:  container.querySelector('#co-cname')?.value.trim() || null,
-      contact_phone: container.querySelector('#co-phone')?.value.trim() || null,
-      contact_email: container.querySelector('#co-email')?.value.trim() || null,
-      website:       container.querySelector('#co-web')?.value.trim()   || null,
-      sticky_notes:  container.querySelector('#co-notes')?.value.trim() || null,
+      city:                    container.querySelector('#co-city')?.value.trim()  || null,
+      address:                 container.querySelector('#co-addr')?.value.trim()  || null,
+      contact_name:            container.querySelector('#co-cname')?.value.trim() || null,
+      contact_phone:           container.querySelector('#co-phone')?.value.trim() || null,
+      contact_email:           container.querySelector('#co-email')?.value.trim() || null,
+      website:                 container.querySelector('#co-web')?.value.trim()   || null,
+      worksafebc_employer_id:  container.querySelector('#co-wsbc')?.value.trim()  || null,
+      sticky_notes:            container.querySelector('#co-notes')?.value.trim() || null,
     }
 
     try {
       run(
         `UPDATE companies SET name=?, city=?, address=?, contact_name=?, contact_phone=?,
-         contact_email=?, website=?, sticky_notes=?, updated_at=datetime('now')
+         contact_email=?, website=?, worksafebc_employer_id=?, sticky_notes=?,
+         updated_at=datetime('now')
          WHERE company_id=?`,
         [fields.name, fields.city, fields.address, fields.contact_name, fields.contact_phone,
-         fields.contact_email, fields.website, fields.sticky_notes, companyId]
+         fields.contact_email, fields.website, fields.worksafebc_employer_id,
+         fields.sticky_notes, companyId]
       )
       await save(session?.writerName ?? 'admin')
       _mode = null
@@ -201,14 +204,15 @@ function companyInfoCard(co, totalTests) {
   return `
     <div class="info-card">
       <dl>
-        ${row('City',        co.city)}
-        ${row('Address',     co.address)}
-        ${row('Contact',     co.contact_name)}
-        ${row('Phone',       co.contact_phone)}
-        ${row('Email',       co.contact_email)}
-        ${row('Website',     co.website)}
-        ${row('Notes',       co.sticky_notes)}
-        ${row('Total tests', totalTests || null)}
+        ${row('City',              co.city)}
+        ${row('Address',           co.address)}
+        ${row('Contact',           co.contact_name)}
+        ${row('Phone',             co.contact_phone)}
+        ${row('Email',             co.contact_email)}
+        ${row('Website',           co.website)}
+        ${row('WorkSafeBC Employer ID', co.worksafebc_employer_id)}
+        ${row('Notes',             co.sticky_notes)}
+        ${row('Total tests',       totalTests || null)}
       </dl>
     </div>
   `
@@ -245,6 +249,10 @@ function companyEditForm(co) {
         <div>
           <label class="field-label">Website</label>
           <input class="search-input" id="co-web" value="${esc(co.website ?? '')}">
+        </div>
+        <div>
+          <label class="field-label">WorkSafeBC Employer ID</label>
+          <input class="search-input" id="co-wsbc" value="${esc(co.worksafebc_employer_id ?? '')}" placeholder="e.g. 404639">
         </div>
         <div style="grid-column:1/-1">
           <label class="field-label">Sticky Notes</label>
