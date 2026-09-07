@@ -309,7 +309,9 @@ export function generateWsbcCsv(testIds) {
       yesNo(q.wear_hpd                 ?? q.regularly_wear_hpd),
       q.hpd_class                      ?? '',
       q.hpd_style                      ?? '',
-      q.hpd_no_reason                  ?? q.why_not_wear_hpd ?? '',
+      yesNo(q.wear_hpd ?? q.regularly_wear_hpd) === 'Yes'
+        ? 'N/A'
+        : (q.hpd_no_reason || q.why_not_wear_hpd || ''),
       yesNo(q.employer_info),
       yesNo(q.ear_infection),
       yesNo(q.ear_surgery),
