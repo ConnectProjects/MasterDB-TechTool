@@ -98,17 +98,6 @@ function yesNo(v) {
   return String(v)
 }
 
-// WSBC ExposedToNoiseInLastHours expects a number.
-// TechTool captures noise_2h (Yes/No) + noise_2h_duration (text range).
-function noiseHours(noise_2h, noise_2h_duration) {
-  if (!noise_2h || noise_2h === false || String(noise_2h).toLowerCase() === 'false'
-      || String(noise_2h).toLowerCase() === 'no') return '0'
-  const dur = String(noise_2h_duration ?? '').toLowerCase()
-  if (dur.includes('less') || dur.startsWith('<')) return '1'
-  if (dur.includes('2-4') || dur.includes('2–4')) return '3'
-  if (dur.includes('over') || dur.startsWith('>')) return '6'
-  return '2'  // exposed but duration not specified
-}
 
 /**
  * Validate that all required WSBC fields are present for the given test IDs.
@@ -192,14 +181,10 @@ export function validateWsbcExport(testIds) {
     if (q.wear_hpd == null && q.regularly_wear_hpd == null) {
       testIssues.push(`${dateLbl} — HPD usage question not answered (RegularlyWearHearingProt)`)
     }
-    // WhyNotWear is required only when the worker does not wear HPD
-    const wearVal   = q.wear_hpd ?? q.regularly_wear_hpd
-    const notWearing = wearVal != null && (
-      wearVal === false ||
-      String(wearVal).toLowerCase() === 'false' ||
-      String(wearVal).toLowerCase() === 'no'
-    )
-    if (notWearing && !q.hpd_no_reason && !q.why_not_wear_hpd) {
+    // WhyNotWear is required only when the worker does not wear HPD.
+    // Use yesNo() so the check exactly mirrors what the export outputs.
+    const notWearing = yesNo(q.wear_hpd ?? q.regularly_wear_hpd) === 'No'
+    if (notWearing && !(q.hpd_no_reason || q.why_not_wear_hpd)) {
       testIssues.push(`${dateLbl} — Worker does not wear HPD but no reason was recorded (WhyNotWearHearingProtReg)`)
     }
     if (q.employer_info == null) {
@@ -314,11 +299,13 @@ export function generateWsbcCsv(testIds) {
       dbThreshold(row, 'right_4k'),
       dbThreshold(row, 'right_6k'),
       dbThreshold(row, 'right_8k'),
-      // TechTool keys first, fall back to WSBC-import keys (BC Hydro data)
+      // ExposedToNoiseInLastHours: Yes/No. HowManyHoursExposedToNoise: duration text when Yes.
       q.noise_2h != null
-        ? noiseHours(q.noise_2h, q.noise_2h_duration)
-        : (q.exposed_noise_last_hours ?? ''),
-      q.noise_2h_duration              ?? q.hours_noise_exposure ?? '',
+        ? yesNo(q.noise_2h)
+        : yesNo(q.exposed_noise_last_hours),
+      q.noise_2h != null
+        ? (q.noise_2h ? (q.noise_2h_duration ?? '') : '')
+        : (q.hours_noise_exposure ?? ''),
       yesNo(q.wear_hpd                 ?? q.regularly_wear_hpd),
       q.hpd_class                      ?? '',
       q.hpd_style                      ?? '',
