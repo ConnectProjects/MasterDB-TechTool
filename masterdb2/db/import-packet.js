@@ -298,6 +298,13 @@ export async function commitImport(packet, decisions = {}, writerName, { techFol
   const resolvedLocation = resolveLocation(packet, company, decisions.locationId ?? null)
   if (!resolvedLocation) throw new Error(`Location could not be resolved. Provide decisions.locationId.`)
 
+  // Backfill CU code to the location if the tech entered it in TechTool and the DB doesn't have it
+  const packetCuCode = packet.location?.cu_code
+  if (packetCuCode && !resolvedLocation.cu_code) {
+    run(`UPDATE locations SET cu_code=?, updated_at=datetime('now') WHERE location_id=?`,
+      [packetCuCode, resolvedLocation.location_id])
+  }
+
   const rules = (Array.isArray(packet.rules) && packet.rules.length)
     ? packet.rules
     : query('SELECT * FROM classification_rules WHERE province_code = ? ORDER BY priority DESC', [province])

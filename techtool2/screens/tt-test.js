@@ -480,25 +480,27 @@ export function mount(container, { navigate, session, filename, techFolder }) {
                 <input class="search-input" id="ef-first" value="${esc(emp.first_name ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Middle name</label>
                 <input class="search-input" id="ef-middle" value="${esc(emp.middle_name ?? '')}" style="width:100%"></div>
-              <div><label class="field-label">Date of birth</label>
+              <div><label class="field-label">Date of birth${isBC ? ' *' : ''}</label>
                 <input class="search-input" id="ef-dob" type="date" value="${esc(emp.dob ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Last test</label>
                 <div class="search-input" style="width:100%;background:var(--clr-surface);color:${lastTestDate ? 'inherit' : 'var(--clr-subtle)'}">${lastTestDate ? esc(lastTestDate) : 'None on file'}</div></div>
-              <div style="grid-column:1/-1"><label class="field-label">Job title</label>
+              <div style="grid-column:1/-1"><label class="field-label">Job title${isBC ? ' *' : ''}</label>
                 <div id="ef-job-wrap" style="width:100%"></div></div>
               ${isBC ? `
-              <div><label class="field-label">Gender</label>
+              <div><label class="field-label">Gender *</label>
                 <select class="form-select" id="ef-gender" style="width:100%">
                   <option value="">—</option>
                   ${['Male','Female','Other'].map(g =>
                     `<option value="${g}"${(emp.gender ?? '') === g ? ' selected' : ''}>${g}</option>`
                   ).join('')}
                 </select></div>
-              <div><label class="field-label">SIN last 4</label>
-                <input class="search-input" id="ef-sin" maxlength="4" value="${esc(emp.sin_last_4 ?? '')}" style="width:100%"></div>
-              <div><label class="field-label">Yrs in occupation</label>
+              <div><label class="field-label">Yrs in occupation *</label>
                 <input class="search-input" id="ef-years" type="number" min="0" max="60"
                        value="${esc(slot.pre?.years_in_occupation ?? '')}" style="width:100%"></div>
+              <div><label class="field-label">Location CU Code</label>
+                <input class="search-input" id="loc-cu-code" value="${esc(p.location?.cu_code ?? '')}" style="width:100%"></div>
+              <div><label class="field-label">SIN last 4</label>
+                <input class="search-input" id="ef-sin" maxlength="4" value="${esc(emp.sin_last_4 ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Email</label>
                 <input class="search-input" id="ef-email" type="email" value="${esc(emp.email ?? '')}" style="width:100%"></div>
               <div><label class="field-label">Phone</label>
@@ -822,6 +824,9 @@ export function mount(container, { navigate, session, filename, techFolder }) {
       phone:           q('#ef-phone')?.value.trim()  || null,
     }
 
+    const cuCode = q('#loc-cu-code')?.value.trim()
+    if (cuCode && _packet.location) _packet.location.cu_code = cuCode
+
     slot.testType = q('#tf-type')?.value  ?? 'Periodic'
     slot.testDate = q('#tf-date')?.value  ?? ''
 
@@ -886,7 +891,20 @@ export function mount(container, { navigate, session, filename, techFolder }) {
     const anyThreshold = Object.values(slot.thresholds).some(v => v != null)
     if (!anyThreshold) { showErr(errEl, 'Enter at least one threshold value.'); return }
 
-    const emp = _packet.employees[slot.empIdx]
+    const emp    = _packet.employees[slot.empIdx]
+    const isBC   = (_packet.visit?.province ?? _packet.company?.province) === 'BC'
+
+    if (isBC) {
+      const dob    = slot.empEdits?.dob             ?? emp.dob
+      const gender = slot.empEdits?.gender          ?? emp.gender
+      const noc    = slot.empEdits?.occupation_code ?? emp.occupation_code
+      const years  = slot.pre?.years_in_occupation
+
+      if (!dob)    { showErr(errEl, 'Date of birth is required for BC WSBC reporting.'); return }
+      if (!gender) { showErr(errEl, 'Gender is required for BC WSBC reporting.'); return }
+      if (!noc)    { showErr(errEl, 'Occupation code (job title) is required for BC WSBC reporting.'); return }
+      if (!years)  { showErr(errEl, 'Years in occupation is required for BC WSBC reporting.'); return }
+    }
 
     // Apply worker info corrections into the packet
     if (slot.empEdits) {

@@ -174,7 +174,7 @@ export function validateWsbcExport(testIds) {
     }
 
     // Worker-level (deduplicated per person)
-    if (!row.wsbc_worker_id)  addWorkerIssue(row, 'Worker ID (WSBC)')
+    // wsbc_worker_id is optional — WSBC assigns it on first submission for new workers
     if (!row.dob)             addWorkerIssue(row, 'Date of birth')
     if (!row.gender)          addWorkerIssue(row, 'Gender')
     if (!row.occupation_code) addWorkerIssue(row, 'Occupation code')
