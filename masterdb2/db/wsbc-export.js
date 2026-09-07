@@ -90,12 +90,113 @@ function dbThreshold(row, col) {
   return v != null ? String(v) : ''
 }
 
-function yesNo(v) {
+// WSBC expects Y/N (not Yes/No)
+function mapYN(v) {
   if (v == null || v === '') return ''
   const s = String(v).toLowerCase()
-  if (s === 'true' || s === 'yes' || s === '1') return 'Yes'
-  if (s === 'false' || s === 'no' || s === '0') return 'No'
-  return String(v)
+  if (s === 'true' || s === 'yes' || s === 'y' || s === '1') return 'Y'
+  if (s === 'false' || s === 'no' || s === 'n' || s === '0') return 'N'
+  return ''
+}
+
+function mapGender(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === 'female' || s === 'f') return 'F'
+  if (s === 'male' || s === 'm') return 'M'
+  return 'NA'
+}
+
+// HowManyHoursExposedToNoise: WSBC codes 1/2/3
+function mapNoiseHours(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === '1' || s.startsWith('less') || s.startsWith('< 2') || s.startsWith('<2')) return '1'
+  if (s === '2' || s.includes('2-4') || s.includes('2–4')) return '2'
+  if (s === '3' || s.startsWith('over') || s.startsWith('more') || s.startsWith('> 4') || s.startsWith('>4')) return '3'
+  return ''
+}
+
+// ClassOfHearingProtWornReg: A/B/C/DUAL
+function mapHpdClass(v) {
+  if (!v) return ''
+  const s = String(v).toUpperCase()
+  if (s === 'A' || s === 'B' || s === 'C' || s === 'DUAL') return s
+  if (s.includes('DUAL')) return 'DUAL'
+  if (/\bA\b/.test(s)) return 'A'
+  if (/\bB\b/.test(s)) return 'B'
+  if (/\bC\b/.test(s)) return 'C'
+  return ''
+}
+
+// StyleOfHearingProtWornReg: EM/EP/EPM/DUAL
+function mapHpdStyle(v) {
+  if (!v) return ''
+  const s = String(v).toUpperCase()
+  if (s === 'EM' || s === 'EP' || s === 'EPM' || s === 'DUAL') return s
+  if (s.includes('DUAL')) return 'DUAL'
+  if (s.includes('BOTH') && (s.includes('MUFF') || s.includes('PLUG'))) return 'DUAL'
+  if (s.includes('MOULD') || s.includes('MOLDED') || s.includes('CUSTOM')) return 'EPM'
+  if (s.includes('EARMUFF') || s.includes('MUFF')) return 'EM'
+  if (s.includes('PLUG')) return 'EP'
+  return ''
+}
+
+// WhyNotWearHearingProtReg: NOCOMFORT/NOCOMMUN/NOHEARING/NONOISE/NOSIZE/OTHER
+function mapHpdReason(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === 'n/a') return ''
+  const codes = ['nocomfort', 'nocommun', 'nohearing', 'nonoise', 'nosize', 'other']
+  if (codes.includes(s)) return s.toUpperCase()
+  if (s.includes('comfort'))                        return 'NOCOMFORT'
+  if (s.includes('commun'))                         return 'NOCOMMUN'
+  if (s.includes('block') || s.includes('sound'))  return 'NOHEARING'
+  if (s.includes('nois'))                           return 'NONOISE'
+  if (s.includes('size'))                           return 'NOSIZE'
+  return 'OTHER'
+}
+
+// WhichEar / FromWhichShoulderShoot: B/L/R
+function mapSide(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === 'both' || s === 'b') return 'B'
+  if (s === 'left'  || s === 'l') return 'L'
+  if (s === 'right' || s === 'r') return 'R'
+  return ''
+}
+
+// WhenFirstNoticed (tinnitus): LT5/5TO10/11TO15/GT15
+function mapWhenNoticed(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s.includes('< 5') || s.includes('lt5'))                  return 'LT5'
+  if (s.includes('5-10') || s.includes('5to10'))               return '5TO10'
+  if (s.includes('11-15') || s.includes('11to15'))             return '11TO15'
+  if (s.includes('> 15') || s.includes('gt15'))                return 'GT15'
+  return ''
+}
+
+// HasUsedFirearms type: B/HG/RS/N
+function mapFirearmsType(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === 'b' || s === 'both')                               return 'B'
+  if (s === 'hg' || s.includes('handgun'))                     return 'HG'
+  if (s === 'rs' || s.includes('rifle') || s.includes('shotgun')) return 'RS'
+  if (s === 'n' || s === 'none')                               return 'N'
+  return ''
+}
+
+// NumYearsShootingFirearms: LT10/10TO20/MT20
+function mapFirearmsDuration(v) {
+  if (!v) return ''
+  const s = String(v).toLowerCase()
+  if (s === 'lt10' || s.includes('less') || s.startsWith('< 10') || s.startsWith('<10')) return 'LT10'
+  if (s === '10to20' || s.includes('10-20'))                   return '10TO20'
+  if (s === 'mt20' || s.includes('more') || s.startsWith('> 20') || s.startsWith('>20')) return 'MT20'
+  return ''
 }
 
 
@@ -183,7 +284,7 @@ export function validateWsbcExport(testIds) {
     }
     // WhyNotWear is required only when the worker does not wear HPD.
     // Use yesNo() so the check exactly mirrors what the export outputs.
-    const notWearing = yesNo(q.wear_hpd ?? q.regularly_wear_hpd) === 'No'
+    const notWearing = mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'N'
     if (notWearing && !(q.hpd_no_reason || q.why_not_wear_hpd)) {
       testIssues.push(`${dateLbl} — Worker does not wear HPD but no reason was recorded (WhyNotWearHearingProtReg)`)
     }
@@ -274,7 +375,7 @@ export function generateWsbcCsv(testIds) {
       row.last_name   ?? '',
       '',                              // Worker Abbr Name
       isoToWsbc(row.dob),
-      row.gender ?? '',
+      mapGender(row.gender),
       row.sin_last_4  ?? '',
       q.years_in_occupation            ?? '',
       row.worksafebc_employer_id ?? '',
@@ -299,34 +400,34 @@ export function generateWsbcCsv(testIds) {
       dbThreshold(row, 'right_4k'),
       dbThreshold(row, 'right_6k'),
       dbThreshold(row, 'right_8k'),
-      // ExposedToNoiseInLastHours: Yes/No. HowManyHoursExposedToNoise: duration text when Yes.
+      // ExposedToNoiseInLastHours: Y/N. HowManyHoursExposedToNoise: WSBC code 1/2/3.
       q.noise_2h != null
-        ? yesNo(q.noise_2h)
-        : yesNo(q.exposed_noise_last_hours),
+        ? mapYN(q.noise_2h)
+        : mapYN(q.exposed_noise_last_hours),
       q.noise_2h != null
-        ? (q.noise_2h ? (q.noise_2h_duration ?? '') : '')
-        : (q.hours_noise_exposure ?? ''),
-      yesNo(q.wear_hpd                 ?? q.regularly_wear_hpd),
-      q.hpd_class                      ?? '',
-      q.hpd_style                      ?? '',
-      yesNo(q.wear_hpd ?? q.regularly_wear_hpd) === 'Yes'
-        ? 'N/A'
-        : (q.hpd_no_reason || q.why_not_wear_hpd || ''),
-      yesNo(q.employer_info),
-      yesNo(q.ear_infection),
-      yesNo(q.ear_surgery),
-      yesNo(q.dizziness),
-      yesNo(q.head_injury),
-      yesNo(q.childhood_loss           ?? q.childhood_hearing_loss),
-      yesNo(q.tinnitus),
-      q.tinnitus_ear                   ?? '',
-      '',                              // WhenFirstNoticed
-      yesNo(q.blast_exposure),
-      yesNo(q.firearms),
-      '',                              // FromWhichShoulderShoot
-      '',                              // NumYearsShootingFirearms
-      'Yes',                           // confirm tech determined category
-      'Yes',                           // confirm tech counselled worker
+        ? (q.noise_2h ? mapNoiseHours(q.noise_2h_duration ?? '') : '')
+        : mapNoiseHours(q.hours_noise_exposure ?? ''),
+      mapYN(q.wear_hpd                 ?? q.regularly_wear_hpd),
+      mapHpdClass(q.hpd_class          ?? q.hpd_protection_class),
+      mapHpdStyle(q.hpd_style          ?? q.hearing_prot_style),
+      mapYN(q.wear_hpd ?? q.regularly_wear_hpd) === 'Y'
+        ? ''
+        : mapHpdReason(q.hpd_no_reason || q.why_not_wear_hpd),
+      mapYN(q.employer_info),
+      mapYN(q.ear_infection),
+      mapYN(q.ear_surgery),
+      mapYN(q.dizziness),
+      mapYN(q.head_injury),
+      mapYN(q.childhood_loss           ?? q.childhood_hearing_loss),
+      mapYN(q.tinnitus),
+      mapSide(q.tinnitus_ear),
+      mapWhenNoticed(q.tinnitus_duration ?? q.when_first_noticed),
+      mapYN(q.blast_exposure),
+      mapYN(q.firearms),
+      mapSide(q.firearms_shoulder),
+      mapFirearmsDuration(q.firearms_duration ?? q.num_years_shooting),
+      'Y',                             // confirm tech determined category
+      'Y',                             // confirm tech counselled worker
       row.worker_email                 ?? '',
       row.worker_phone                 ?? '',
     ]
